@@ -8,13 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageRoot = path.join(__dirname, '..');
 const MODELS_DIR = path.join(process.cwd(), 'models');
 
-const MODELS = {
+const EXTERNAL_MODELS = {
     'melspectrogram.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/melspectrogram.onnx',
     'embedding_model.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/embedding_model.onnx',
-    'silero_vad.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/silero_vad.onnx',
-    'hello_deepa.onnx': 'https://github.com/Firojpaudel/OpenWakeWord_npm_porting/raw/main/models/hello_deepa.onnx',
-    'namaste_deepa.onnx': 'https://github.com/Firojpaudel/OpenWakeWord_npm_porting/raw/main/models/namaste_deepa.onnx'
+    'silero_vad.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/silero_vad.onnx'
 };
+
+const SAMPLE_MODELS = ['hello_deepa.onnx', 'namaste_deepa.onnx'];
 
 async function downloadFile(url, dest) {
     return new Promise((resolve, reject) => {
@@ -55,8 +55,8 @@ async function main() {
         console.log(`Created directory: ${MODELS_DIR}`);
     }
 
-    console.log('Downloading neural model binaries...');
-    for (const [name, url] of Object.entries(MODELS)) {
+    console.log('Deploying base neural model binaries...');
+    for (const [name, url] of Object.entries(EXTERNAL_MODELS)) {
         const dest = path.join(MODELS_DIR, name);
         if (fs.existsSync(dest) && fs.statSync(dest).size > 1000000) {
             console.log(`- ${name} already exists and validated, skipping.`);
@@ -70,34 +70,37 @@ async function main() {
             console.log(`Failed: ${err.message}`);
         }
     }
-    console.log('\nAI Model deployment complete.');
+
+    console.log('\nDeploying sample wake-word models from package...');
+    for (const name of SAMPLE_MODELS) {
+        const src = path.join(packageRoot, 'models', name);
+        const dest = path.join(MODELS_DIR, name);
+        copyIfExists(src, dest, 'Sample Model');
+    }
 
     console.log('\nDeploying ONNX Runtime WebAssembly environment...');
     const nodeModulesPath = path.join(process.cwd(), 'node_modules', 'onnxruntime-web', 'dist');
 
     if (fs.existsSync(nodeModulesPath)) {
-        // Copy EVERYTHING starting with ort-wasm to ensure all loaders/workers are present
         const runtimeFiles = fs.readdirSync(nodeModulesPath).filter(f =>
             f.startsWith('ort-wasm') && (f.endsWith('.wasm') || f.endsWith('.mjs') || f.endsWith('.js'))
         );
         for (const file of runtimeFiles) {
             copyIfExists(path.join(nodeModulesPath, file), path.join(MODELS_DIR, file), 'RUNTIME');
         }
-    } else {
-        console.log('Warning: onnxruntime-web not found in node_modules. Standard inference may fail.');
+        // Also copy the main entry point if not already there
+        copyIfExists(path.join(nodeModulesPath, 'ort.mjs'), path.join(MODELS_DIR, 'ort.mjs'), 'RUNTIME_ENTRY');
     }
 
     console.log('\nDeploying optimized AI Listening Interface...');
-    const exampleHtml = path.join(packageRoot, 'index.html');
-    const destHtml = path.join(process.cwd(), 'index.html');
-    copyIfExists(exampleHtml, destHtml, 'UI');
+    copyIfExists(path.join(packageRoot, 'index.html'), path.join(process.cwd(), 'index.html'), 'UI');
+    copyIfExists(path.join(packageRoot, 'openwakeword.mjs'), path.join(process.cwd(), 'openwakeword.mjs'), 'Library');
 
-    const libSrc = path.join(packageRoot, 'dist', 'index.js');
-    const libDest = path.join(process.cwd(), 'openwakeword.mjs');
-    copyIfExists(libSrc, libDest, 'Library');
+    // Copy test.html too
+    copyIfExists(path.join(packageRoot, 'models', 'test.html'), path.join(MODELS_DIR, 'test.html'), 'Debug UI');
 
     console.log('\n----------------------------------------------------');
-    console.log('SETUP COMPLETE (v0.1.15)');
+    console.log('SETUP COMPLETE (v0.1.18)');
     console.log('----------------------------------------------------');
     console.log('Your precision AI wake word interface is ready.');
     console.log('\nTo start the demo:');
