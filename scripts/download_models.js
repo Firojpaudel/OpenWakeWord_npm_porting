@@ -72,10 +72,13 @@ async function main() {
     const nodeModulesPath = path.join(process.cwd(), 'node_modules', 'onnxruntime-web', 'dist');
 
     if (fs.existsSync(nodeModulesPath)) {
-        // Copy WASM files (Required for high-speed inference)
-        const wasmFiles = fs.readdirSync(nodeModulesPath).filter(f => f.endsWith('.wasm'));
-        for (const file of wasmFiles) {
-            copyIfExists(path.join(nodeModulesPath, file), path.join(MODELS_DIR, file), 'WASM');
+        // Copy WASM and related loader files (Required for high-speed inference)
+        const runtimeFiles = fs.readdirSync(nodeModulesPath).filter(f =>
+            f.endsWith('.wasm') ||
+            (f.startsWith('ort-wasm') && (f.endsWith('.mjs') || f.endsWith('.js')))
+        );
+        for (const file of runtimeFiles) {
+            copyIfExists(path.join(nodeModulesPath, file), path.join(MODELS_DIR, file), 'RUNTIME');
         }
     } else {
         console.log('Warning: onnxruntime-web not found. Ensuring high-speed browser execution requires "npm install".');
