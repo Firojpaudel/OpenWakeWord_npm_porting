@@ -16,6 +16,7 @@
     "files": [
         "dist",
         "src",
+        "scripts",
         "README.md",
         "LICENSE"
     ],
@@ -28,7 +29,8 @@
     },
     "scripts": {
         "build": "tsup src/index.ts --format esm,cjs --dts",
-        "dev": "tsup src/index.ts --format esm,cjs --watch --dts"
+        "dev": "tsup src/index.ts --format esm,cjs --watch --dts",
+        "download-models": "node scripts/download_models.js"
     },
     "keywords": [
         "wakeword",
