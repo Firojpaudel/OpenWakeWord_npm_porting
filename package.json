@@ -6,13 +6,13 @@
         "openwakeword-js-setup": "scripts/download_models.js"
     },
     "main": "dist/index.js",
-    "module": "dist/index.mjs",
+    "module": "dist/index.js",
     "types": "dist/index.d.ts",
     "type": "module",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "import": "./dist/index.mjs",
+            "import": "./dist/index.js",
             "require": "./dist/index.cjs"
         }
     },
@@ -21,6 +21,7 @@
         "src",
         "scripts",
         "index.html",
+        "openwakeword.mjs",
         "models/hello_deepa.onnx",
         "models/namaste_deepa.onnx",
         "README.md",

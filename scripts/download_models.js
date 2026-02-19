@@ -72,10 +72,14 @@ async function main() {
     const nodeModulesPath = path.join(process.cwd(), 'node_modules', 'onnxruntime-web', 'dist');
 
     if (fs.existsSync(nodeModulesPath)) {
+        // Copy WASM files
         const wasmFiles = fs.readdirSync(nodeModulesPath).filter(f => f.endsWith('.wasm'));
         for (const file of wasmFiles) {
             copyIfExists(path.join(nodeModulesPath, file), path.join(MODELS_DIR, file), 'WASM');
         }
+        // Copy ORT Script
+        const ortPath = path.join(nodeModulesPath, 'ort.min.js');
+        copyIfExists(ortPath, path.join(MODELS_DIR, 'ort.min.js'), 'ORT Script');
     } else {
         console.log('Warning: onnxruntime-web not found. Ensuring high-speed browser execution requires "npm install".');
     }
@@ -84,6 +88,10 @@ async function main() {
     const exampleHtml = path.join(packageRoot, 'index.html');
     const destHtml = path.join(process.cwd(), 'index.html');
     copyIfExists(exampleHtml, destHtml, 'UI');
+
+    const libSrc = path.join(packageRoot, 'dist', 'index.js');
+    const libDest = path.join(process.cwd(), 'openwakeword.mjs');
+    copyIfExists(libSrc, libDest, 'Library');
 
     console.log('\n----------------------------------------------------');
     console.log('SETUP COMPLETE');
