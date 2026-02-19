@@ -9,9 +9,9 @@ const packageRoot = path.join(__dirname, '..');
 const MODELS_DIR = path.join(process.cwd(), 'models');
 
 const MODELS = {
-    'melspectrogram.onnx': 'https://github.com/dscripka/openWakeWord/raw/main/openwakeword/resources/models/melspectrogram.onnx',
-    'embedding_model.onnx': 'https://github.com/dscripka/openWakeWord/raw/main/openwakeword/resources/models/embedding_model.onnx',
-    'silero_vad.onnx': 'https://github.com/dscripka/openWakeWord/raw/main/openwakeword/resources/models/silero_vad.onnx',
+    'melspectrogram.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/melspectrogram.onnx',
+    'embedding_model.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/embedding_model.onnx',
+    'silero_vad.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/silero_vad.onnx',
     'hello_deepa.onnx': 'https://github.com/Firojpaudel/OpenWakeWord_npm_porting/raw/main/models/hello_deepa.onnx',
     'namaste_deepa.onnx': 'https://github.com/Firojpaudel/OpenWakeWord_npm_porting/raw/main/models/namaste_deepa.onnx'
 };
@@ -58,7 +58,7 @@ async function main() {
     console.log('Downloading neural model binaries...');
     for (const [name, url] of Object.entries(MODELS)) {
         const dest = path.join(MODELS_DIR, name);
-        if (fs.existsSync(dest) && fs.statSync(dest).size > 1000) {
+        if (fs.existsSync(dest) && fs.statSync(dest).size > 1000000) {
             console.log(`- ${name} already exists and validated, skipping.`);
             continue;
         }
