@@ -1,6 +1,8 @@
 # openWakeWord-JS
 
-A high-accuracy, 100% logic-aligned JavaScript/TypeScript port of [openWakeWord](https://github.com/dscripka/openWakeWord). Designed for browser-first execution using ONNX Runtime Web, with Node.js support.
+**The precision JavaScript/TypeScript port of openWakeWord.**
+
+A high-accuracy, 100% logic-aligned port of [openWakeWord](https://github.com/dscripka/openWakeWord). Designed for browser-first execution using ONNX Runtime Web, with Node.js support.
 
 ## Credits & Acknowledgments
 This package is a JavaScript port of the work by David Scripka. 
