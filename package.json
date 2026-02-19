@@ -28,7 +28,7 @@
         "LICENSE"
     ],
     "dependencies": {
-        "onnxruntime-web": "^1.19.0"
+        "onnxruntime-web": "1.24.1"
     },
     "devDependencies": {
         "typescript": "^5.0.0",

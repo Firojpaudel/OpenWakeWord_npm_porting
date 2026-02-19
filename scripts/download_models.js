@@ -18,19 +18,23 @@ const MODELS = {
 
 async function downloadFile(url, dest) {
     return new Promise((resolve, reject) => {
-        const file = fs.createWriteStream(dest);
         https.get(url, (response) => {
             if (response.statusCode === 302 || response.statusCode === 301) {
                 downloadFile(response.headers.location, dest).then(resolve).catch(reject);
                 return;
             }
+            if (response.statusCode !== 200) {
+                reject(new Error(`Failed to download: ${response.statusCode} for ${url}`));
+                return;
+            }
+            const file = fs.createWriteStream(dest);
             response.pipe(file);
             file.on('finish', () => {
                 file.close();
                 resolve();
             });
         }).on('error', (err) => {
-            fs.unlink(dest, () => { });
+            if (fs.existsSync(dest)) fs.unlinkSync(dest);
             reject(err);
         });
     });
@@ -51,11 +55,11 @@ async function main() {
         console.log(`Created directory: ${MODELS_DIR}`);
     }
 
-    console.log('Downloading base openWakeWord models...');
+    console.log('Downloading neural model binaries...');
     for (const [name, url] of Object.entries(MODELS)) {
         const dest = path.join(MODELS_DIR, name);
-        if (fs.existsSync(dest)) {
-            console.log(`- ${name} already exists, skipping.`);
+        if (fs.existsSync(dest) && fs.statSync(dest).size > 1000) {
+            console.log(`- ${name} already exists and validated, skipping.`);
             continue;
         }
         process.stdout.write(`- Downloading ${name}... `);
@@ -66,25 +70,24 @@ async function main() {
             console.log(`Failed: ${err.message}`);
         }
     }
-    console.log('\nBase and sample models are ready.');
+    console.log('\nAI Model deployment complete.');
 
-    console.log('\nLocating ONNX Runtime WebAssembly files...');
+    console.log('\nDeploying ONNX Runtime WebAssembly environment...');
     const nodeModulesPath = path.join(process.cwd(), 'node_modules', 'onnxruntime-web', 'dist');
 
     if (fs.existsSync(nodeModulesPath)) {
-        // Copy WASM and related loader files (Required for high-speed inference)
+        // Copy EVERYTHING starting with ort-wasm to ensure all loaders/workers are present
         const runtimeFiles = fs.readdirSync(nodeModulesPath).filter(f =>
-            f.endsWith('.wasm') ||
-            (f.startsWith('ort-wasm') && (f.endsWith('.mjs') || f.endsWith('.js')))
+            f.startsWith('ort-wasm') && (f.endsWith('.wasm') || f.endsWith('.mjs') || f.endsWith('.js'))
         );
         for (const file of runtimeFiles) {
             copyIfExists(path.join(nodeModulesPath, file), path.join(MODELS_DIR, file), 'RUNTIME');
         }
     } else {
-        console.log('Warning: onnxruntime-web not found. Ensuring high-speed browser execution requires "npm install".');
+        console.log('Warning: onnxruntime-web not found in node_modules. Standard inference may fail.');
     }
 
-    console.log('\nDeploying AI Listening Interface...');
+    console.log('\nDeploying optimized AI Listening Interface...');
     const exampleHtml = path.join(packageRoot, 'index.html');
     const destHtml = path.join(process.cwd(), 'index.html');
     copyIfExists(exampleHtml, destHtml, 'UI');
@@ -94,7 +97,7 @@ async function main() {
     copyIfExists(libSrc, libDest, 'Library');
 
     console.log('\n----------------------------------------------------');
-    console.log('SETUP COMPLETE');
+    console.log('SETUP COMPLETE (v0.1.15)');
     console.log('----------------------------------------------------');
     console.log('Your precision AI wake word interface is ready.');
     console.log('\nTo start the demo:');
