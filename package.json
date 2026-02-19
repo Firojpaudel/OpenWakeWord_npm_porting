@@ -1,6 +1,6 @@
 {
     "name": "openwakeword-js",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "description": "Port of openWakeWord to JavaScript/TypeScript using ONNX Runtime",
     "bin": {
         "openwakeword-js-setup": "scripts/download_models.js"
