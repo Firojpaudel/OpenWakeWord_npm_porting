@@ -81,7 +81,7 @@ async function main() {
     }
 
     console.log('\nDeploying AI Listening Interface...');
-    const exampleHtml = path.join(packageRoot, 'example', 'index.html');
+    const exampleHtml = path.join(packageRoot, 'index.html');
     const destHtml = path.join(process.cwd(), 'index.html');
     copyIfExists(exampleHtml, destHtml, 'UI');
 

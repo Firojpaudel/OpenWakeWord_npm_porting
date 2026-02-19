@@ -98,7 +98,7 @@ if (scores["my_custom_model"] > 0.5) {
 
 ## 💎 Premium AI Interface
 
-The package includes a high-fidelity, Apple-inspired demo UI out of the box. You can find it in `example/index.html`.
+The package includes a high-fidelity, Apple-inspired demo UI out of the box. You can find it in `index.html`.
 
 ### ✨ Key UI Features
 - **Glassmorphic Design**: Translucent surfaces with deep backdrop blurs.

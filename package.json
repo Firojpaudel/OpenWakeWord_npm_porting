@@ -20,7 +20,7 @@
         "dist",
         "src",
         "scripts",
-        "example",
+        "index.html",
         "models/hello_deepa.onnx",
         "models/namaste_deepa.onnx",
         "README.md",
