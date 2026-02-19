@@ -286,7 +286,7 @@
                             class="h-44 overflow-y-auto rounded-xl bg-[#030406] p-4 font-mono text-[10px] text-slate-600 border border-white/5 custom-scrollbar leading-relaxed">
                             <div
                                 class="opacity-40 animate-pulse font-bold text-blue-900 border border-blue-900/40 p-1 inline-block rounded mb-2">
-                                OPENWAKEWORD-JS V0.1.11 READY</div>
+                                OPENWAKEWORD-JS V0.1.13 READY</div>
                         </div>
                     </div>
                 </details>
@@ -294,15 +294,8 @@
         </main>
     </div>
 
+    <link rel="icon" href="data:image/x-icon;base64,AA">
     <!-- Scripts -->
-    <script type="importmap">
-    {
-        "imports": {
-            "onnxruntime-web": "./models/ort.min.mjs"
-        }
-    }
-    </script>
-    <script src="./models/ort.min.js"></script>
     <script type="module">
         import { Model } from './openwakeword.mjs';
 
@@ -349,7 +342,7 @@
 
         async function init() {
             if (state.model) return true;
-            log('Neural buffers allocating via CDN...', 'SYSTEM');
+            log('Neural buffers allocating locally...', 'SYSTEM');
             try {
                 state.model = new Model({
                     wakewordModels: ['./models/hello_deepa.onnx', './models/namaste_deepa.onnx'],
