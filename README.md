@@ -30,13 +30,10 @@ npm install openwakeword-js onnxruntime-web
 ```
 
 ### 2. Automatic Asset Initialization
-Wake word detection requires specific supporting models (The extraction "ears" and the feature "brain"). We provide a built-in automation script to set up your project directory:
+Run this command from your project root to automatically download the base models and copy the required WebAssembly binaries:
 
 ```bash
-# This command does two things:
-# 1. Downloads base models (melspectrogram, embedding, silero_vad) from the original repo.
-# 2. Copies the required .wasm files from your node_modules into ./models/
-npm run download-models
+npx openwakeword-js-setup
 ```
 
 ### 3. Training & Models

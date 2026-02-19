@@ -2,6 +2,9 @@
     "name": "openwakeword-js",
     "version": "0.1.1",
     "description": "Port of openWakeWord to JavaScript/TypeScript using ONNX Runtime",
+    "bin": {
+        "openwakeword-js-setup": "scripts/download_models.js"
+    },
     "main": "dist/index.js",
     "module": "dist/index.mjs",
     "types": "dist/index.d.ts",
