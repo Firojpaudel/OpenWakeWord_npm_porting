@@ -17,6 +17,7 @@
         "dist",
         "src",
         "scripts",
+        "example",
         "README.md",
         "LICENSE"
     ],

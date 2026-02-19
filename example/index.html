@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>openWakeWord-JS Demo</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px;
+            background: #f4f4f9;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .score {
+            font-size: 2em;
+            margin: 20px;
+            color: #333;
+        }
+
+        .status {
+            color: #666;
+            font-style: italic;
+        }
+
+        .detected {
+            color: #e74c3c;
+            font-weight: bold;
+            animation: pulse 0.5s;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button:disabled {
+            background: #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>openWakeWord-JS</h1>
+        <p class="status" id="status">Click start and say "Hey Deepa" (if you have that model)</p>
+        <button id="startButton">Start Microphone</button>
+        <div class="score" id="score">Score: 0.00</div>
+    </div>
+
+    <!-- Import ORT first if using CDN, or use your bundler -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script type="module">
+        import { Model } from 'https://cdn.jsdelivr.net/npm/openwakeword-js/dist/index.mjs';
+
+        const startButton = document.getElementById('startButton');
+        const scoreDisplay = document.getElementById('score');
+        const statusDisplay = document.getElementById('status');
+
+        let model;
+
+        async function start() {
+            startButton.disabled = true;
+            statusDisplay.textContent = "Initializing models...";
+
+            try {
+                model = new Model({
+                    wakewordModels: ['./models/hey_deepa.onnx'],
+                    melspectrogramModelPath: './models/melspectrogram.onnx',
+                    embeddingModelPath: './models/embedding_model.onnx',
+                    wasmPaths: 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/'
+                });
+
+                await model.init();
+                statusDisplay.textContent = "Listening...";
+
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioContext = new AudioContext({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(1024, 1, 1);
+
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                processor.onaudioprocess = async (e) => {
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const scores = await model.predict(inputData);
+
+                    const topScore = Object.values(scores)[0];
+                    scoreDisplay.textContent = `Score: ${topScore.toFixed(2)}`;
+
+                    if (topScore > 0.5) {
+                        scoreDisplay.classList.add('detected');
+                        setTimeout(() => scoreDisplay.classList.remove('detected'), 500);
+                    }
+                };
+            } catch (err) {
+                statusDisplay.textContent = `Error: ${err.message}`;
+                startButton.disabled = false;
+            }
+        }
+
+        startButton.onclick = start;
+    </script>
+</body>
+
+</html>

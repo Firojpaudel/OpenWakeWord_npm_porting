@@ -56,6 +56,18 @@ If you prefer to download them manually, make sure these files are in your `mode
 
 ---
 
+## Browser Demo
+
+A minimal browser implementation is provided in the `example/index.html` file. You can use it as a reference for handling microphone input and displaying scores.
+
+To run the demo locally:
+1. Install dependencies: `npm install`
+2. Download models: `npm run download-models`
+3. Serve the project: `npx serve .` (or any static file server)
+4. Open `http://localhost:3000/example/index.html`
+
+---
+
 ## Usage Example
 
 ```typescript
