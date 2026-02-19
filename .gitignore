@@ -152,12 +152,14 @@ yarn-error.log*
 .tsbuildinfo
 
 # Models and WASM
-models/
-*.onnx
+models/*
 !models/hello_deepa.onnx
 !models/namaste_deepa.onnx
 !models/test.html
-*.wasm
+# Ignore WASM and runtime artifacts in models/
+models/*.wasm
+models/*.mjs
+models/*.js
 
 # OS files
 .DS_Store

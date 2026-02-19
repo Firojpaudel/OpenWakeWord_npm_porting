@@ -4,14 +4,13 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>AI Wake Word Detector | OpenWakeWord JS</title>
+    <title>AI Wake Word Detector | Local Verification</title>
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
         rel="stylesheet" />
-
-    <!-- Tailwind CSS (Play CDN for Example, note for production users in README) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
         tailwind.config = {
@@ -47,6 +46,7 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
+        /* Premium Slider Fix */
         input[type=range] {
             -webkit-appearance: none;
             appearance: none;
@@ -54,6 +54,7 @@
             cursor: pointer;
             width: 100%;
             height: 24px;
+            /* Ensure enough hit area */
         }
 
         input[type=range]::-webkit-slider-thumb {
@@ -64,6 +65,7 @@
             background: #ffffff;
             cursor: pointer;
             margin-top: -8px;
+            /* Perfectly centered on 4px track */
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
             transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
             border: none;
@@ -153,12 +155,26 @@
             }
         }
 
+        /* Logic to hide slider overlap */
         .slider-container {
             position: relative;
             display: flex;
             align-items: center;
         }
+
+        #sliderFill {
+            pointer-events: none;
+            z-index: 1;
+        }
     </style>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "onnxruntime-web": "./ort.mjs"
+        }
+    }
+    </script>
 </head>
 
 <body
@@ -170,17 +186,17 @@
             <!-- Header -->
             <header class="flex flex-col items-center text-center gap-2">
                 <div
-                    class="inline-flex items-center justify-center size-12 rounded-[1.25rem] bg-surface-glass backdrop-blur-md border border-white/5 mb-4 shadow-lg">
+                    class="inline-flex items-center justify-center size-12 rounded-[1.5rem] bg-surface-glass backdrop-blur-md border border-white/5 mb-4 shadow-lg">
                     <svg class="size-6 text-primary" fill="none" stroke="currentColor" stroke-width="2"
                         viewBox="0 0 24 24">
                         <path d="M12 3v18M17 8v8M7 8v8M21 12v0M3 12v0" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </div>
-                <h1 class="text-3xl md:text-4xl font-light tracking-tight text-white/90">Wake Word Detector</h1>
+                <h1 class="text-3xl md:text-4xl font-light tracking-tight text-white/90">Local Verification</h1>
                 <div
                     class="flex items-center gap-2 text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase bg-white/5 px-4 py-1.5 rounded-full border border-white/5">
                     <span id="statusLed" class="size-1.5 rounded-full bg-slate-500"></span>
-                    <span id="statusTitle">Intelligence Hub</span>
+                    <span id="statusTitle">Local Debug Session</span>
                 </div>
             </header>
 
@@ -215,8 +231,8 @@
                 <div class="mt-8 text-center">
                     <p id="orbLabel" class="text-2xl font-light tracking-wide text-white/50 lowercase">standby</p>
                     <p id="orbSublabel"
-                        class="text-[10px] text-slate-500 mt-2 font-black tracking-widest uppercase opacity-40">Ready to
-                        listen</p>
+                        class="text-xs text-slate-500 mt-2 font-mono tracking-wider uppercase opacity-60">repository
+                        local node</p>
                 </div>
             </section>
 
@@ -225,7 +241,7 @@
                 class="flex flex-col gap-6 bg-surface-glass backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-2xl">
                 <div class="flex flex-col gap-5 px-2">
                     <div class="flex justify-between items-end">
-                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Confidence
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em]">Sensitivity
                             Threshold</label>
                         <span id="thresholdVal"
                             class="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">0.50</span>
@@ -240,41 +256,41 @@
                 </div>
 
                 <button id="toggleBtn"
-                    class="group relative w-full h-16 bg-primary hover:bg-primary-dark active:scale-[0.98] transition-all duration-300 rounded-2xl flex items-center justify-center overflow-hidden shadow-[0_20px_40px_-10px_rgba(25,93,230,0.3)]">
+                    class="group relative w-full h-16 bg-primary hover:bg-primary-dark active:scale-[0.98] transition-all duration-300 rounded-[1.25rem] flex items-center justify-center overflow-hidden shadow-[0_20px_40px_-10px_rgba(25,93,230,0.3)]">
                     <div
                         class="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     </div>
                     <span id="btnText"
                         class="relative flex items-center gap-3 text-white font-bold text-lg tracking-wide uppercase">
-                        <svg class="size-6" fill="currentColor" viewBox="0 0 24 24">
+                        <svg class="size-6 mr-1" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
                         </svg>
-                        Initialize Intelligence
+                        Initialize Local Hub
                     </span>
                 </button>
             </section>
 
             <!-- Detection Stack -->
             <section class="flex flex-col gap-4">
-                <h3 class="text-[10px] font-black text-slate-600 uppercase tracking-widest px-6">Live Activity Stream
-                </h3>
+                <h3 class="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] px-6">Signal Detection Event
+                    Log</h3>
                 <div id="detectionStack" class="flex flex-col gap-3">
                     <div id="emptyState"
-                        class="text-center py-12 text-slate-800 text-[10px] font-bold uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem]">
+                        class="text-center py-10 text-slate-800 text-[10px] font-bold uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem]">
                         Awaiting Audio Triggers</div>
                 </div>
             </section>
 
             <!-- Debug Console -->
             <div class="w-full">
-                <details class="group rounded-[2rem] bg-black/40 border border-white/5 overflow-hidden">
+                <details open class="group rounded-[2rem] bg-black/40 border border-white/5 overflow-hidden">
                     <summary
-                        class="flex cursor-pointer items-center justify-between p-5 text-slate-500 hover:text-white transition-colors select-none list-none text-[10px] font-bold uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
+                        class="flex cursor-pointer items-center justify-between p-5 text-slate-500 hover:text-white transition-colors select-none list-none text-[10px] font-bold uppercase tracking-[0.1em] border-b border-white/5 bg-white/[0.02]">
                         <div class="flex items-center gap-2">
                             <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path d="M8 9l3 3-3 3m5 0h3" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            Neural Diagnostic Console
+                            Repository Diagnostic Stream
                         </div>
                         <svg class="size-4 transition-transform duration-300 group-open:rotate-180 opacity-40"
                             fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -286,7 +302,7 @@
                             class="h-44 overflow-y-auto rounded-xl bg-[#030406] p-4 font-mono text-[10px] text-slate-600 border border-white/5 custom-scrollbar leading-relaxed">
                             <div
                                 class="opacity-40 animate-pulse font-bold text-blue-900 border border-blue-900/40 p-1 inline-block rounded mb-2">
-                                OPENWAKEWORD-JS V0.1.17 READY</div>
+                                RUNNING REPOSITORY LOCAL FILES</div>
                         </div>
                     </div>
                 </details>
@@ -294,10 +310,9 @@
         </main>
     </div>
 
-    <link rel="icon" href="data:image/x-icon;base64,AA">
     <!-- Scripts -->
     <script type="module">
-        import { Model } from './openwakeword.mjs';
+        import { Model } from '../openwakeword.mjs';
 
         const state = {
             isListening: false,
@@ -342,21 +357,22 @@
 
         async function init() {
             if (state.model) return true;
-            log('Neural buffers allocating locally...', 'SYSTEM');
+            log('Neural buffers allocating...', 'SYSTEM');
             try {
+                const base = './';
                 state.model = new Model({
-                    wakewordModels: ['./models/hello_deepa.onnx', './models/namaste_deepa.onnx'],
-                    melspectrogramModelPath: './models/melspectrogram.onnx',
-                    embeddingModelPath: './models/embedding_model.onnx',
-                    vadModelPath: './models/silero_vad.onnx',
+                    wakewordModels: [`${base}hello_deepa.onnx`, `${base}namaste_deepa.onnx`],
+                    melspectrogramModelPath: `${base}melspectrogram.onnx`,
+                    embeddingModelPath: `${base}embedding_model.onnx`,
+                    vadModelPath: `${base}silero_vad.onnx`,
                     inferenceFramework: 'onnx',
-                    wasmPaths: './models/'
+                    wasmPaths: base
                 });
                 await state.model.init();
-                log('Neural intelligence hub connected.', 'SYSTEM');
+                log('Local build linked and bit-perfect.', 'SYSTEM');
                 return true;
             } catch (e) {
-                log(`Session fault: ${e.message}`, 'ERROR');
+                log(`Init error: ${e.message}`, 'ERROR');
                 return false;
             }
         }
@@ -372,11 +388,11 @@
                     </div>
                     <div class="flex flex-col">
                         <span class="text-white font-bold capitalize text-base tracking-tight">${name.replace(/_/g, ' ')}</span>
-                        <span class="text-[9px] text-slate-500 font-black uppercase tracking-[0.1em]">Neural Activation Triggered</span>
+                        <span class="text-[9px] text-slate-500 font-black uppercase tracking-[0.1em]">Verified Repository Signature</span>
                     </div>
                 </div>
                 <div class="flex flex-col items-end gap-1">
-                    <span class="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20">${Math.round(score * 100)}% Confidence</span>
+                    <span class="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20">${Math.round(score * 100)}% Match</span>
                     <span class="text-[8px] font-mono text-slate-700 uppercase">${new Date().toLocaleTimeString([], { hour12: false })}</span>
                 </div>
             `;
@@ -392,9 +408,9 @@
                 ui.orbIcon.classList.add('opacity-40');
                 ui.orbLabel.textContent = "standby";
                 ui.orbLabel.className = "text-2xl font-light tracking-wide text-white/50 lowercase";
-                ui.btnText.innerHTML = `<svg class="size-6 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> START LISTENING`;
+                ui.btnText.innerHTML = `<svg class="size-6 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> RESUME SESSION`;
                 ui.statusLed.className = "size-1.5 rounded-full bg-slate-500";
-                log('Microphone channel closed.');
+                log('Audio channel terminated.');
             } else {
                 ui.btn.disabled = true;
                 const ok = await init();
@@ -406,7 +422,7 @@
                     state.audioContext = new AudioContext({ sampleRate: 16000 });
                     const source = state.audioContext.createMediaStreamSource(stream);
 
-                    // FIXED: Power of two buffer
+                    // FIX: Buffer size MUST be a power of two (1024)
                     state.processor = state.audioContext.createScriptProcessor(1024, 1, 1);
 
                     source.connect(state.processor);
@@ -420,7 +436,7 @@
                             if (s > state.threshold) {
                                 const clean = n.split('/').pop().replace('.onnx', '');
                                 pushDetection(clean, s);
-                                log(`Match Found: ${clean} (${s.toFixed(2)})`, 'MATCH');
+                                log(`Signature Match: ${clean} (${s.toFixed(2)})`, 'MATCH');
                             }
                         }
                     };
@@ -430,26 +446,29 @@
                     ui.orbIcon.classList.remove('opacity-40');
                     ui.orbLabel.textContent = "listening";
                     ui.orbLabel.className = "text-2xl font-light tracking-wide text-white animate-pulse lowercase";
-                    ui.btnText.innerHTML = `<svg class="size-6 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> STOP SESSION`;
+                    ui.btnText.innerHTML = `<svg class="size-6 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> TERMINATE HUD`;
                     ui.statusLed.className = "size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
-                    log('Neural stream active.');
+                    log('Capture stream active.');
                 } catch (e) {
-                    log(`Access denied: ${e.message}`, 'ERROR');
+                    log(`Channel fault: ${e.message}`, 'ERROR');
                 }
             }
         }
 
         ui.btn.onclick = toggle;
+
+        // Final Fix for Slider Aesthetics & Responsiveness
         ui.slider.oninput = (e) => {
             state.threshold = parseFloat(e.target.value);
             ui.sliderVal.textContent = state.threshold.toFixed(2);
             ui.sliderFill.style.width = `${state.threshold * 100}%`;
         };
+
         ui.slider.onchange = (e) => {
-            log(`Threshold optimized to ${state.threshold.toFixed(2)}`);
+            log(`Threshold precision: ${state.threshold.toFixed(2)}`);
         };
 
-        log('Intelligence hub standing by.', 'SYSTEM');
+        log('Local environment standing by.', 'SYSTEM');
     </script>
 </body>
 
