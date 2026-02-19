@@ -4,133 +4,586 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>openWakeWord-JS Demo</title>
+    <title>openWakeWord | AI Listening Interface</title>
     <style>
+        :root {
+            --bg-color: #0c0c0e;
+            --panel-bg: rgba(28, 28, 30, 0.7);
+            --accent-color: #34d399;
+            /* Subtle neon green */
+            --text-primary: #f5f5f7;
+            --text-secondary: rgba(245, 245, 247, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --shadow-primary: 0 20px 40px rgba(0, 0, 0, 0.4);
+            --easing: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
         body {
-            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-color);
+            background: radial-gradient(circle at center, #1c1c1e 0%, #0c0c0e 100%);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient Glow Effect */
+        body::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(52, 211, 153, 0.03) 0%, transparent 60%);
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .main-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-radius: 32px;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-primary);
+            text-align: center;
+            transition: transform 0.4s var(--easing);
+        }
+
+        /* Title Section */
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+
+        /* Status Indicator Section */
+        .status-area {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 50px;
-            background: #f4f4f9;
+            margin-bottom: 40px;
         }
 
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
+        .orb-outer {
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
         }
 
-        .score {
-            font-size: 2em;
-            margin: 20px;
-            color: #333;
+        .orb {
+            width: 50px;
+            height: 50px;
+            background: #3a3a3c;
+            border-radius: 50%;
+            position: relative;
+            z-index: 2;
+            transition: all 0.5s var(--easing);
         }
 
-        .status {
-            color: #666;
-            font-style: italic;
+        .orb-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 50%;
+            background: transparent;
+            z-index: 1;
+            transition: all 0.5s var(--easing);
         }
 
-        .detected {
-            color: #e74c3c;
-            font-weight: bold;
-            animation: pulse 0.5s;
+        /* Orb States */
+        .state-idle .orb {
+            background: #3a3a3c;
+            animation: breathe 4s infinite var(--easing);
         }
 
-        @keyframes pulse {
+        .state-loading .orb-glow {
+            border: 2px solid rgba(245, 245, 247, 0.1);
+            border-top-color: var(--text-primary);
+            animation: rotate 1s linear infinite;
+        }
+
+        .state-listening .orb {
+            background: var(--accent-color);
+            box-shadow: 0 0 30px rgba(52, 211, 153, 0.4);
+            animation: pulse-listening 2s infinite var(--easing);
+        }
+
+        .state-error .orb {
+            background: #ff453a;
+            box-shadow: 0 0 30px rgba(255, 69, 58, 0.4);
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse-listening {
             0% {
                 transform: scale(1);
+                box-shadow: 0 0 0px rgba(52, 211, 153, 0.4);
             }
 
             50% {
                 transform: scale(1.1);
+                box-shadow: 0 0 40px rgba(52, 211, 153, 0.6);
             }
 
             100% {
                 transform: scale(1);
+                box-shadow: 0 0 0px rgba(52, 211, 153, 0.4);
             }
         }
 
-        button {
-            padding: 10px 20px;
-            font-size: 1em;
-            cursor: pointer;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
-        button:disabled {
-            background: #ccc;
+        .status-text {
+            margin-top: 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Slider Section */
+        .controls {
+            width: 100%;
+            margin-bottom: 32px;
+        }
+
+        .slider-container {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .label-group {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .slider-value {
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+            margin: 0;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s var(--easing), box-shadow 0.2s var(--easing);
+        }
+
+        input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Action Button */
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 18px;
+            border: none;
+            background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);
+            color: var(--text-primary);
+            cursor: pointer;
+            border: 1px solid var(--glass-border);
+            transition: all 0.3s var(--easing);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        .btn-active {
+            background: var(--text-primary);
+            color: var(--bg-color);
+        }
+
+        /* Detection Cards */
+        .detections-overlay {
+            position: fixed;
+            top: 40px;
+            right: 40px;
+            width: 320px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .card {
+            background: rgba(44, 44, 46, 0.8);
+            backdrop-filter: blur(20px);
+            margin-bottom: 16px;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            animation: card-appear 0.5s var(--easing) forwards;
+            position: relative;
+            transform-origin: top right;
+        }
+
+        @keyframes card-appear {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .card.fade-out {
+            animation: card-fade-out 0.5s var(--easing) forwards;
+        }
+
+        @keyframes card-fade-out {
+            to {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .card-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 12px;
+        }
+
+        .card-accent {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        /* Advanced Panel */
+        .advanced-toggle {
+            margin-top: 24px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+            transition: color 0.2s;
+        }
+
+        .advanced-toggle:hover {
+            color: var(--text-primary);
+        }
+
+        .log-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s var(--easing);
+            text-align: left;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .log-container.visible {
+            max-height: 150px;
+            padding: 12px;
+        }
+
+        .log-content {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            white-space: pre-wrap;
+            height: 126px;
+            overflow-y: auto;
+        }
+
+        /* Custom Scrollbar */
+        .log-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .log-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>openWakeWord-JS</h1>
-        <p class="status" id="status">Click start and say "Hey Deepa" (if you have that model)</p>
-        <button id="startButton">Start Microphone</button>
-        <div class="score" id="score">Score: 0.00</div>
+
+    <div class="detections-overlay" id="detectionsOverlay"></div>
+
+    <div class="main-container" id="mainCard">
+        <h1>Wake Word Detection</h1>
+        <div class="subtitle">Real-time AI Listening Interface</div>
+
+        <div class="status-area">
+            <div class="orb-outer state-idle" id="orbOuter">
+                <div class="orb-glow"></div>
+                <div class="orb"></div>
+            </div>
+            <div class="status-text" id="statusText">System Idle</div>
+        </div>
+
+        <div class="controls">
+            <div class="slider-container">
+                <div class="label-group">
+                    <span>Precision Threshold</span>
+                    <span class="slider-value" id="thresholdValue">0.50</span>
+                </div>
+                <input type="range" id="thresholdSlider" min="0.1" max="0.99" step="0.01" value="0.50">
+            </div>
+        </div>
+
+        <button class="btn-primary" id="toggleButton">Start Listening</button>
+
+        <a class="advanced-toggle" id="advancedToggle">Show Advanced Debug Log</a>
+        <div class="log-container" id="logContainer">
+            <div class="log-content" id="log">Initializing system components...</div>
+        </div>
     </div>
 
-    <!-- Import ORT first if using CDN, or use your bundler -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
     <script type="module">
         import { Model } from 'https://cdn.jsdelivr.net/npm/openwakeword-js/dist/index.mjs';
 
-        const startButton = document.getElementById('startButton');
-        const scoreDisplay = document.getElementById('score');
-        const statusDisplay = document.getElementById('status');
+        const elements = {
+            orb: document.getElementById('orbOuter'),
+            status: document.getElementById('statusText'),
+            button: document.getElementById('toggleButton'),
+            slider: document.getElementById('thresholdSlider'),
+            val: document.getElementById('thresholdValue'),
+            overlay: document.getElementById('detectionsOverlay'),
+            log: document.getElementById('log'),
+            advanced: document.getElementById('advancedToggle'),
+            logContainer: document.getElementById('logContainer')
+        };
 
-        let model;
+        const config = {
+            threshold: 0.50,
+            isListening: false,
+            model: null,
+            audioContext: null,
+            audioProcessor: null
+        };
 
-        async function start() {
-            startButton.disabled = true;
-            statusDisplay.textContent = "Initializing models...";
+        function updateStatus(state, text) {
+            elements.orb.className = `orb-outer state-${state}`;
+            elements.status.textContent = text;
+            log(`Status changed: ${text}`);
+        }
 
+        function log(msg) {
+            const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            elements.log.innerHTML += `\n[${time}] ${msg}`;
+            elements.log.scrollTop = elements.log.scrollHeight;
+        }
+
+        function showDetection(name, score) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <span class="card-title">${name} Activated</span>
+                <div class="card-meta">
+                    <span class="card-accent">Score: ${score.toFixed(2)}</span>
+                    <span>Language: English</span>
+                </div>
+            `;
+            elements.overlay.prepend(card);
+
+            // Visual haptic on main card
+            document.getElementById('mainCard').style.transform = 'scale(1.02)';
+            setTimeout(() => {
+                document.getElementById('mainCard').style.transform = 'scale(1)';
+            }, 100);
+
+            setTimeout(() => {
+                card.classList.add('fade-out');
+                setTimeout(() => card.remove(), 500);
+            }, 5000);
+        }
+
+        // Logic Initialization
+        async function initializeModel() {
+            if (config.model) return true;
+
+            updateStatus('loading', 'Loading AI Models');
             try {
-                model = new Model({
-                    wakewordModels: ['./models/hey_deepa.onnx'],
+                config.model = new Model({
+                    wakewordModels: [
+                        './models/hello_deepa.onnx' // Replace with your model
+                    ],
                     melspectrogramModelPath: './models/melspectrogram.onnx',
                     embeddingModelPath: './models/embedding_model.onnx',
-                    wasmPaths: 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/'
+                    vadModelPath: './models/silero_vad.onnx',
+                    inferenceFramework: 'onnx',
+                    wasmPaths: './models/' // Use models folder for WASM
                 });
 
-                await model.init();
-                statusDisplay.textContent = "Listening...";
-
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const audioContext = new AudioContext({ sampleRate: 16000 });
-                const source = audioContext.createMediaStreamSource(stream);
-                const processor = audioContext.createScriptProcessor(1024, 1, 1);
-
-                source.connect(processor);
-                processor.connect(audioContext.destination);
-
-                processor.onaudioprocess = async (e) => {
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    const scores = await model.predict(inputData);
-
-                    const topScore = Object.values(scores)[0];
-                    scoreDisplay.textContent = `Score: ${topScore.toFixed(2)}`;
-
-                    if (topScore > 0.5) {
-                        scoreDisplay.classList.add('detected');
-                        setTimeout(() => scoreDisplay.classList.remove('detected'), 500);
-                    }
-                };
+                await config.model.init();
+                log("All models initialized successfully.");
+                return true;
             } catch (err) {
-                statusDisplay.textContent = `Error: ${err.message}`;
-                startButton.disabled = false;
+                log(`Init Error: ${err.message}`);
+                updateStatus('error', 'Initialization Failed');
+                return false;
             }
         }
 
-        startButton.onclick = start;
+        async function startEngine() {
+            const ready = await initializeModel();
+            if (!ready) return;
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                config.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = config.audioContext.createMediaStreamSource(stream);
+
+                // Using ScriptProcessor for maximum compatibility (AudioWorklet suggested for future)
+                config.audioProcessor = config.audioContext.createScriptProcessor(1024, 1, 1);
+
+                source.connect(config.audioProcessor);
+                config.audioProcessor.connect(config.audioContext.destination);
+
+                config.audioProcessor.onaudioprocess = async (e) => {
+                    if (!config.isListening) return;
+
+                    const input = e.inputBuffer.getChannelData(0);
+                    const scores = await config.model.predict(input);
+
+                    for (const [name, score] of Object.entries(scores)) {
+                        if (score > config.threshold) {
+                            showDetection(name.split('/').pop().replace('.onnx', ''), score);
+                        }
+                    }
+                };
+
+                updateStatus('listening', 'AI Listening');
+                elements.button.textContent = "Stop Listening";
+                elements.button.classList.add('btn-active');
+                config.isListening = true;
+            } catch (err) {
+                updateStatus('error', 'Microphone Denied');
+                log(`Mic Error: ${err.message}`);
+            }
+        }
+
+        function stopEngine() {
+            config.isListening = false;
+            if (config.audioContext) {
+                config.audioContext.close();
+            }
+            updateStatus('idle', 'System Idle');
+            elements.button.textContent = "Start Listening";
+            elements.button.classList.remove('btn-active');
+        }
+
+        // Event Listeners
+        elements.button.onclick = () => {
+            if (config.isListening) stopEngine();
+            else startEngine();
+        };
+
+        elements.slider.oninput = (e) => {
+            config.threshold = parseFloat(e.target.value);
+            elements.val.textContent = config.threshold.toFixed(2);
+        };
+
+        elements.advanced.onclick = () => {
+            const isVisible = elements.logContainer.classList.toggle('visible');
+            elements.advanced.textContent = isVisible ? "Hide Debug Log" : "Show Advanced Debug Log";
+        };
+
     </script>
 </body>
 

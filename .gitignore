@@ -151,9 +151,11 @@ yarn-debug.log*
 yarn-error.log*
 .tsbuildinfo
 
-# Models and WASM (User requested to ignore)
+# Models and WASM
 models/
 *.onnx
+!models/hello_deepa.onnx
+!models/namaste_deepa.onnx
 *.wasm
 
 # OS files

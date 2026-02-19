@@ -21,6 +21,8 @@
         "src",
         "scripts",
         "example",
+        "models/hello_deepa.onnx",
+        "models/namaste_deepa.onnx",
         "README.md",
         "LICENSE"
     ],
