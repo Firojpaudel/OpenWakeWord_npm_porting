@@ -23,7 +23,7 @@ You need at least three models to detect a wake word:
 - `silero_vad.onnx` (Optional): Voice Activity Detection for improved accuracy.
 
 > [!NOTE]
-> You can generate your own custom wake word models using this [Kaggle Notebook by Firoj Paudel](https://www.kaggle.com/code/firojpaudel/deepa-wise).
+> You can generate your own custom wake word models using this [Kaggle Notebook Link](https://www.kaggle.com/code/firojpaudel/deepa-wise).
 
 ---
 
