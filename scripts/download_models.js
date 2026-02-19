@@ -11,7 +11,9 @@ const MODELS_DIR = path.join(process.cwd(), 'models');
 const MODELS = {
     'melspectrogram.onnx': 'https://github.com/dscripka/openWakeWord/raw/main/openwakeword/resources/models/melspectrogram.onnx',
     'embedding_model.onnx': 'https://github.com/dscripka/openWakeWord/raw/main/openwakeword/resources/models/embedding_model.onnx',
-    'silero_vad.onnx': 'https://github.com/dscripka/openWakeWord/raw/main/openwakeword/resources/models/silero_vad.onnx'
+    'silero_vad.onnx': 'https://github.com/dscripka/openWakeWord/raw/main/openwakeword/resources/models/silero_vad.onnx',
+    'hello_deepa.onnx': 'https://github.com/Firojpaudel/OpenWakeWord_npm_porting/raw/main/models/hello_deepa.onnx',
+    'namaste_deepa.onnx': 'https://github.com/Firojpaudel/OpenWakeWord_npm_porting/raw/main/models/namaste_deepa.onnx'
 };
 
 async function downloadFile(url, dest) {
@@ -64,13 +66,7 @@ async function main() {
             console.log(`Failed: ${err.message}`);
         }
     }
-    console.log('\nDeploying sample wake word models...');
-    const packageModelsDir = path.join(packageRoot, 'models');
-    ['hello_deepa.onnx', 'namaste_deepa.onnx'].forEach(m => {
-        const src = path.join(packageModelsDir, m);
-        const dest = path.join(MODELS_DIR, m);
-        copyIfExists(src, dest, 'Model');
-    });
+    console.log('\nBase and sample models are ready.');
 
     console.log('\nLocating ONNX Runtime WebAssembly files...');
     const nodeModulesPath = path.join(process.cwd(), 'node_modules', 'onnxruntime-web', 'dist');
