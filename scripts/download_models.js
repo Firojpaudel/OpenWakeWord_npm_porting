@@ -77,9 +77,12 @@ async function main() {
         for (const file of wasmFiles) {
             copyIfExists(path.join(nodeModulesPath, file), path.join(MODELS_DIR, file), 'WASM');
         }
-        // Copy ORT Script
+        // Copy ORT Script (UMD)
         const ortPath = path.join(nodeModulesPath, 'ort.min.js');
         copyIfExists(ortPath, path.join(MODELS_DIR, 'ort.min.js'), 'ORT Script');
+        // Copy ORT Script (ESM)
+        const ortMjsPath = path.join(nodeModulesPath, 'ort.min.mjs');
+        copyIfExists(ortMjsPath, path.join(MODELS_DIR, 'ort.min.mjs'), 'ORT ESM Script');
     } else {
         console.log('Warning: onnxruntime-web not found. Ensuring high-speed browser execution requires "npm install".');
     }
