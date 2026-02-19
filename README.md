@@ -98,13 +98,19 @@ if (scores["my_custom_model"] > 0.5) {
 
 ## Local Development & Demo
 
-We have included a full working example in the `example/` folder.
+### Option A: The Fast Start (Automated)
+If you just want to see it working:
+1. `npm install openwakeword-js onnxruntime-web`
+2. `npx openwakeword-js-setup`
+3. `npx serve .` 
+4. Open `http://localhost:3000`
 
-1.  Clone the repo and run `npm install`.
-2.  Run `npm run download-models`.
-3.  Serve the root directory using a static server (e.g., `npx serve .`).
-4.  Navigate to `http://localhost:3000/example/index.html`.
-5.  Allow Microphone access and watch the real-time scores.
+### Option B: Manual Development
+If you are developing inside this repository:
+1. Clone the repo and run `npm install`.
+2. Run `npm run download-models`.
+3. Serve the root directory using a static server (e.g., `npx serve .`).
+4. Navigate to `http://localhost:3000/example/index.html`.
 
 ---
 
