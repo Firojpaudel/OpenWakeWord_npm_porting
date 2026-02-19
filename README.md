@@ -123,7 +123,7 @@ The demo uses the **Tailwind Play CDN** for portability. For production environm
 4.  **Test**: Open `models/test.html` (configured for local repository verification).
 
 ---
-*Maintained by WiseYak Team. Inspired by the original [openWakeWord](https://github.com/dscripka/openWakeWord) project.*
+*Inspired by the original [openWakeWord](https://github.com/dscripka/openWakeWord) project.*
 
 ## 📄 License
 Apache-2.0
