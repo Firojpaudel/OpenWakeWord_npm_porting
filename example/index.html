@@ -1,309 +1,150 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>openWakeWord | AI Listening Interface</title>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>AI Wake Word Detector | OpenWakeWord JS</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+
+    <!-- Tailwind CSS (Play CDN for Example, note for production users in README) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#195de6",
+                        "primary-dark": "#0d3aa9",
+                        "background-dark": "#0c0d12",
+                        "surface-dark": "#161b26",
+                        "surface-glass": "rgba(255, 255, 255, 0.03)",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Courier New", "monospace"],
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
     <style>
-        :root {
-            --bg-color: #0c0c0e;
-            --panel-bg: rgba(28, 28, 30, 0.7);
-            --accent-color: #34d399;
-            /* Subtle neon green */
-            --text-primary: #f5f5f7;
-            --text-secondary: rgba(245, 245, 247, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --shadow-primary: 0 20px 40px rgba(0, 0, 0, 0.4);
-            --easing: cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * {
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-color);
-            background: radial-gradient(circle at center, #1c1c1e 0%, #0c0c0e 100%);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* Ambient Glow Effect */
-        body::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 800px;
-            height: 800px;
-            background: radial-gradient(circle, rgba(52, 211, 153, 0.03) 0%, transparent 60%);
-            transform: translate(-50%, -50%);
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .main-container {
-            position: relative;
-            z-index: 1;
-            width: 100%;
-            max-width: 500px;
-            padding: 40px;
-            background: var(--panel-bg);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border-radius: 32px;
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--shadow-primary);
-            text-align: center;
-            transition: transform 0.4s var(--easing);
-        }
-
-        /* Title Section */
-        h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0 0 4px 0;
-            letter-spacing: -0.5px;
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-bottom: 40px;
-        }
-
-        /* Status Indicator Section */
-        .status-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 40px;
-        }
-
-        .orb-outer {
-            width: 120px;
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .orb {
-            width: 50px;
-            height: 50px;
-            background: #3a3a3c;
-            border-radius: 50%;
-            position: relative;
-            z-index: 2;
-            transition: all 0.5s var(--easing);
-        }
-
-        .orb-glow {
-            position: absolute;
+        .bg-noise {
+            position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 50%;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
             background: transparent;
-            z-index: 1;
-            transition: all 0.5s var(--easing);
+            cursor: pointer;
+            width: 100%;
+            height: 24px;
         }
 
-        /* Orb States */
-        .state-idle .orb {
-            background: #3a3a3c;
-            animation: breathe 4s infinite var(--easing);
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+            border: none;
+            position: relative;
+            z-index: 2;
         }
 
-        .state-loading .orb-glow {
-            border: 2px solid rgba(245, 245, 247, 0.1);
-            border-top-color: var(--text-primary);
-            animation: rotate 1s linear infinite;
+        input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.15);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6), 0 0 0 4px rgba(25, 93, 230, 0.2);
         }
 
-        .state-listening .orb {
-            background: var(--accent-color);
-            box-shadow: 0 0 30px rgba(52, 211, 153, 0.4);
-            animation: pulse-listening 2s infinite var(--easing);
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            border: none;
         }
 
-        .state-error .orb {
-            background: #ff453a;
-            box-shadow: 0 0 30px rgba(255, 69, 58, 0.4);
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(25, 93, 230, 0.4);
+            }
+
+            70% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 30px rgba(25, 93, 230, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(25, 93, 230, 0);
+            }
+        }
+
+        .animate-pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
 
         @keyframes breathe {
 
             0%,
             100% {
-                transform: scale(1);
-                opacity: 0.8;
+                opacity: 0.6;
+                transform: scale(0.98);
             }
 
             50% {
-                transform: scale(1.05);
                 opacity: 1;
+                transform: scale(1.02);
             }
         }
 
-        @keyframes pulse-listening {
-            0% {
-                transform: scale(1);
-                box-shadow: 0 0 0px rgba(52, 211, 153, 0.4);
-            }
-
-            50% {
-                transform: scale(1.1);
-                box-shadow: 0 0 40px rgba(52, 211, 153, 0.6);
-            }
-
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 0px rgba(52, 211, 153, 0.4);
-            }
+        .animate-breathe {
+            animation: breathe 3s ease-in-out infinite;
         }
 
-        @keyframes rotate {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
         }
 
-        .status-text {
-            margin-top: 16px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        /* Slider Section */
-        .controls {
-            width: 100%;
-            margin-bottom: 32px;
-        }
-
-        .slider-container {
-            position: relative;
-            padding: 20px 0;
-        }
-
-        .label-group {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            font-size: 13px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        .slider-value {
-            color: var(--text-primary);
-            font-variant-numeric: tabular-nums;
-        }
-
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 4px;
+        .custom-scrollbar::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 2px;
-            outline: none;
-            margin: 0;
         }
 
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            background: var(--text-primary);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-            transition: transform 0.2s var(--easing), box-shadow 0.2s var(--easing);
+        .detection-card {
+            animation: card-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
-        input[type=range]:active::-webkit-slider-thumb {
-            transform: scale(1.2);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-        }
-
-        /* Action Button */
-        .btn-primary {
-            width: 100%;
-            padding: 16px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 18px;
-            border: none;
-            background: linear-gradient(135deg, #2c2c2e 0%, #1c1c1e 100%);
-            color: var(--text-primary);
-            cursor: pointer;
-            border: 1px solid var(--glass-border);
-            transition: all 0.3s var(--easing);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            background: linear-gradient(135deg, #3a3a3c 0%, #2c2c2e 100%);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        .btn-primary:active {
-            transform: translateY(1px);
-        }
-
-        .btn-active {
-            background: var(--text-primary);
-            color: var(--bg-color);
-        }
-
-        /* Detection Cards */
-        .detections-overlay {
-            position: fixed;
-            top: 40px;
-            right: 40px;
-            width: 320px;
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        .card {
-            background: rgba(44, 44, 46, 0.8);
-            backdrop-filter: blur(20px);
-            margin-bottom: 16px;
-            padding: 20px;
-            border-radius: 20px;
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            animation: card-appear 0.5s var(--easing) forwards;
-            position: relative;
-            transform-origin: top right;
-        }
-
-        @keyframes card-appear {
+        @keyframes card-in {
             from {
                 opacity: 0;
-                transform: translateY(20px) scale(0.9);
+                transform: translateY(15px) scale(0.98);
             }
 
             to {
@@ -312,278 +153,303 @@
             }
         }
 
-        .card.fade-out {
-            animation: card-fade-out 0.5s var(--easing) forwards;
-        }
-
-        @keyframes card-fade-out {
-            to {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-        }
-
-        .card-title {
-            font-weight: 600;
-            font-size: 16px;
-            margin-bottom: 4px;
-            display: block;
-        }
-
-        .card-meta {
-            font-size: 12px;
-            color: var(--text-secondary);
+        .slider-container {
+            position: relative;
             display: flex;
-            gap: 12px;
-        }
-
-        .card-accent {
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-
-        /* Advanced Panel */
-        .advanced-toggle {
-            margin-top: 24px;
-            font-size: 12px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            text-decoration: none;
-            display: block;
-            transition: color 0.2s;
-        }
-
-        .advanced-toggle:hover {
-            color: var(--text-primary);
-        }
-
-        .log-container {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s var(--easing);
-            text-align: left;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            margin-top: 20px;
-        }
-
-        .log-container.visible {
-            max-height: 150px;
-            padding: 12px;
-        }
-
-        .log-content {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 11px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-            white-space: pre-wrap;
-            height: 126px;
-            overflow-y: auto;
-        }
-
-        /* Custom Scrollbar */
-        .log-content::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .log-content::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .log-content::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
+            align-items: center;
         }
     </style>
 </head>
 
-<body>
+<body
+    class="bg-background-dark text-slate-100 font-display min-h-screen antialiased selection:bg-primary selection:text-white overflow-x-hidden">
+    <div class="bg-noise"></div>
 
-    <div class="detections-overlay" id="detectionsOverlay"></div>
-
-    <div class="main-container" id="mainCard">
-        <h1>Wake Word Detection</h1>
-        <div class="subtitle">Real-time AI Listening Interface</div>
-
-        <div class="status-area">
-            <div class="orb-outer state-idle" id="orbOuter">
-                <div class="orb-glow"></div>
-                <div class="orb"></div>
-            </div>
-            <div class="status-text" id="statusText">System Idle</div>
-        </div>
-
-        <div class="controls">
-            <div class="slider-container">
-                <div class="label-group">
-                    <span>Precision Threshold</span>
-                    <span class="slider-value" id="thresholdValue">0.50</span>
+    <div class="relative flex min-h-screen w-full flex-col items-center py-10 px-4 sm:px-6">
+        <main class="w-full max-w-[600px] flex flex-col gap-10 z-10">
+            <!-- Header -->
+            <header class="flex flex-col items-center text-center gap-2">
+                <div
+                    class="inline-flex items-center justify-center size-12 rounded-[1.25rem] bg-surface-glass backdrop-blur-md border border-white/5 mb-4 shadow-lg">
+                    <svg class="size-6 text-primary" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path d="M12 3v18M17 8v8M7 8v8M21 12v0M3 12v0" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
                 </div>
-                <input type="range" id="thresholdSlider" min="0.1" max="0.99" step="0.01" value="0.50">
+                <h1 class="text-3xl md:text-4xl font-light tracking-tight text-white/90">Wake Word Detector</h1>
+                <div
+                    class="flex items-center gap-2 text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase bg-white/5 px-4 py-1.5 rounded-full border border-white/5">
+                    <span id="statusLed" class="size-1.5 rounded-full bg-slate-500"></span>
+                    <span id="statusTitle">Intelligence Hub</span>
+                </div>
+            </header>
+
+            <!-- Visualizer Orb Section -->
+            <section class="relative py-12 flex flex-col items-center justify-center">
+                <div id="orbGlow"
+                    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/20 blur-[100px] rounded-full pointer-events-none transition-all duration-700">
+                </div>
+
+                <div class="relative group">
+                    <div id="orbRing" class="absolute inset-0 rounded-full bg-primary/20 blur-xl"></div>
+                    <div class="absolute -inset-4 rounded-full border border-primary/20 opacity-30 scale-110"></div>
+
+                    <div
+                        class="relative flex items-center justify-center size-40 rounded-full bg-gradient-to-b from-surface-dark to-black shadow-[0_0_40px_-10px_rgba(25,93,230,0.3)] border border-white/10 overflow-hidden transition-all duration-500">
+                        <div
+                            class="absolute inset-0 bg-gradient-to-tr from-primary/20 via-transparent to-transparent opacity-50">
+                        </div>
+                        <div id="orbIcon"
+                            class="relative z-10 flex flex-col items-center gap-2 animate-breathe opacity-40">
+                            <svg class="size-12 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" fill="none"
+                                stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" x2="12" y1="19" y2="23" />
+                                <line x1="8" x2="16" y1="23" y2="23" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center">
+                    <p id="orbLabel" class="text-2xl font-light tracking-wide text-white/50 lowercase">standby</p>
+                    <p id="orbSublabel"
+                        class="text-[10px] text-slate-500 mt-2 font-black tracking-widest uppercase opacity-40">Ready to
+                        listen</p>
+                </div>
+            </section>
+
+            <!-- Controls Panel -->
+            <section
+                class="flex flex-col gap-6 bg-surface-glass backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 shadow-2xl">
+                <div class="flex flex-col gap-5 px-2">
+                    <div class="flex justify-between items-end">
+                        <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Confidence
+                            Threshold</label>
+                        <span id="thresholdVal"
+                            class="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">0.50</span>
+                    </div>
+                    <div class="slider-container relative h-6">
+                        <input id="thresholdSlider" class="w-full relative z-2" max="0.99" min="0.01" step="0.01"
+                            type="range" value="0.50" />
+                        <div id="sliderFill"
+                            class="absolute left-0 top-1/2 -translate-y-1/2 h-[4px] bg-primary rounded-l-full"
+                            style="width: 50%;"></div>
+                    </div>
+                </div>
+
+                <button id="toggleBtn"
+                    class="group relative w-full h-16 bg-primary hover:bg-primary-dark active:scale-[0.98] transition-all duration-300 rounded-2xl flex items-center justify-center overflow-hidden shadow-[0_20px_40px_-10px_rgba(25,93,230,0.3)]">
+                    <div
+                        class="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    </div>
+                    <span id="btnText"
+                        class="relative flex items-center gap-3 text-white font-bold text-lg tracking-wide uppercase">
+                        <svg class="size-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                        Initialize Intelligence
+                    </span>
+                </button>
+            </section>
+
+            <!-- Detection Stack -->
+            <section class="flex flex-col gap-4">
+                <h3 class="text-[10px] font-black text-slate-600 uppercase tracking-widest px-6">Live Activity Stream
+                </h3>
+                <div id="detectionStack" class="flex flex-col gap-3">
+                    <div id="emptyState"
+                        class="text-center py-12 text-slate-800 text-[10px] font-bold uppercase tracking-widest border border-dashed border-white/5 rounded-[2rem]">
+                        Awaiting Audio Triggers</div>
+                </div>
+            </section>
+
+            <!-- Debug Console -->
+            <div class="w-full">
+                <details class="group rounded-[2rem] bg-black/40 border border-white/5 overflow-hidden">
+                    <summary
+                        class="flex cursor-pointer items-center justify-between p-5 text-slate-500 hover:text-white transition-colors select-none list-none text-[10px] font-bold uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
+                        <div class="flex items-center gap-2">
+                            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M8 9l3 3-3 3m5 0h3" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Neural Diagnostic Console
+                        </div>
+                        <svg class="size-4 transition-transform duration-300 group-open:rotate-180 opacity-40"
+                            fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </summary>
+                    <div class="p-4">
+                        <div id="console"
+                            class="h-44 overflow-y-auto rounded-xl bg-[#030406] p-4 font-mono text-[10px] text-slate-600 border border-white/5 custom-scrollbar leading-relaxed">
+                            <div
+                                class="opacity-40 animate-pulse font-bold text-blue-900 border border-blue-900/40 p-1 inline-block rounded mb-2">
+                                OPENWAKEWORD-JS V0.1.5 READY</div>
+                        </div>
+                    </div>
+                </details>
             </div>
-        </div>
-
-        <button class="btn-primary" id="toggleButton">Start Listening</button>
-
-        <a class="advanced-toggle" id="advancedToggle">Show Advanced Debug Log</a>
-        <div class="log-container" id="logContainer">
-            <div class="log-content" id="log">Initializing system components...</div>
-        </div>
+        </main>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.0/dist/ort.min.js"></script>
     <script type="module">
-        import { Model } from 'https://cdn.jsdelivr.net/npm/openwakeword-js@0.1.4/dist/index.mjs';
+        import { Model } from 'https://cdn.jsdelivr.net/npm/openwakeword-js@0.1.5/dist/index.mjs';
 
-        const elements = {
-            orb: document.getElementById('orbOuter'),
-            status: document.getElementById('statusText'),
-            button: document.getElementById('toggleButton'),
-            slider: document.getElementById('thresholdSlider'),
-            val: document.getElementById('thresholdValue'),
-            overlay: document.getElementById('detectionsOverlay'),
-            log: document.getElementById('log'),
-            advanced: document.getElementById('advancedToggle'),
-            logContainer: document.getElementById('logContainer')
-        };
-
-        const config = {
-            threshold: 0.50,
+        const state = {
             isListening: false,
+            threshold: 0.50,
             model: null,
             audioContext: null,
-            audioProcessor: null
+            processor: null,
+            startTime: Date.now()
         };
 
-        function updateStatus(state, text) {
-            elements.orb.className = `orb-outer state-${state}`;
-            elements.status.textContent = text;
-            log(`Status changed: ${text}`);
+        const ui = {
+            btn: document.getElementById('toggleBtn'),
+            btnText: document.getElementById('btnText'),
+            slider: document.getElementById('thresholdSlider'),
+            sliderVal: document.getElementById('thresholdVal'),
+            sliderFill: document.getElementById('sliderFill'),
+            orbRing: document.getElementById('orbRing'),
+            orbIcon: document.getElementById('orbIcon'),
+            orbLabel: document.getElementById('orbLabel'),
+            orbSublabel: document.getElementById('orbSublabel'),
+            statusLed: document.getElementById('statusLed'),
+            statusTitle: document.getElementById('statusTitle'),
+            stack: document.getElementById('detectionStack'),
+            console: document.getElementById('console'),
+            empty: document.getElementById('emptyState')
+        };
+
+        function log(msg, level = 'INFO') {
+            const time = ((Date.now() - state.startTime) / 1000).toFixed(1);
+            const colors = {
+                INFO: 'text-blue-500 font-medium',
+                SYSTEM: 'text-purple-400 font-bold',
+                MATCH: 'text-emerald-400 font-black',
+                ERROR: 'text-red-500 font-bold bg-red-500/10 px-1 rounded'
+            };
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 mb-1 border-b border-white/5 pb-1';
+            div.innerHTML = `<span class="opacity-40 min-w-[40px]">${time}s</span> <span class="${colors[level] || 'text-slate-500'} min-w-[50px] uppercase">[${level}]</span> <span class="flex-1">${msg}</span>`;
+            ui.console.appendChild(div);
+            ui.console.scrollTop = ui.console.scrollHeight;
         }
 
-        function log(msg) {
-            const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            elements.log.innerHTML += `\n[${time}] ${msg}`;
-            elements.log.scrollTop = elements.log.scrollHeight;
-        }
-
-        function showDetection(name, score) {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <span class="card-title">${name} Activated</span>
-                <div class="card-meta">
-                    <span class="card-accent">Score: ${score.toFixed(2)}</span>
-                    <span>Language: English</span>
-                </div>
-            `;
-            elements.overlay.prepend(card);
-
-            // Visual haptic on main card
-            document.getElementById('mainCard').style.transform = 'scale(1.02)';
-            setTimeout(() => {
-                document.getElementById('mainCard').style.transform = 'scale(1)';
-            }, 100);
-
-            setTimeout(() => {
-                card.classList.add('fade-out');
-                setTimeout(() => card.remove(), 500);
-            }, 5000);
-        }
-
-        // Logic Initialization
-        async function initializeModel() {
-            if (config.model) return true;
-
-            updateStatus('loading', 'Loading AI Models');
+        async function init() {
+            if (state.model) return true;
+            log('Neural buffers allocating via CDN...', 'SYSTEM');
             try {
-                config.model = new Model({
-                    wakewordModels: [
-                        './models/hello_deepa.onnx' // Replace with your model
-                    ],
+                state.model = new Model({
+                    wakewordModels: ['./models/hello_deepa.onnx', './models/namaste_deepa.onnx'],
                     melspectrogramModelPath: './models/melspectrogram.onnx',
                     embeddingModelPath: './models/embedding_model.onnx',
                     vadModelPath: './models/silero_vad.onnx',
                     inferenceFramework: 'onnx',
-                    wasmPaths: './models/' // Use models folder for WASM
+                    wasmPaths: './models/'
                 });
-
-                await config.model.init();
-                log("All models initialized successfully.");
+                await state.model.init();
+                log('Neural intelligence hub connected.', 'SYSTEM');
                 return true;
-            } catch (err) {
-                log(`Init Error: ${err.message}`);
-                updateStatus('error', 'Initialization Failed');
+            } catch (e) {
+                log(`Session fault: ${e.message}`, 'ERROR');
                 return false;
             }
         }
 
-        async function startEngine() {
-            const ready = await initializeModel();
-            if (!ready) return;
+        function pushDetection(name, score) {
+            if (ui.empty) ui.empty.style.display = 'none';
+            const card = document.createElement('div');
+            card.className = "detection-card flex items-center justify-between p-5 bg-white/5 backdrop-blur-md rounded-[1.5rem] border border-white/10 shadow-lg";
+            card.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <div class="size-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-inner">
+                        <svg class="size-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-white font-bold capitalize text-base tracking-tight">${name.replace(/_/g, ' ')}</span>
+                        <span class="text-[9px] text-slate-500 font-black uppercase tracking-[0.1em]">Neural Activation Triggered</span>
+                    </div>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                    <span class="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-full border border-emerald-400/20">${Math.round(score * 100)}% Confidence</span>
+                    <span class="text-[8px] font-mono text-slate-700 uppercase">${new Date().toLocaleTimeString([], { hour12: false })}</span>
+                </div>
+            `;
+            ui.stack.prepend(card);
+            if (ui.stack.children.length > 5) ui.stack.lastElementChild.remove();
+        }
 
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                config.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                const source = config.audioContext.createMediaStreamSource(stream);
+        async function toggle() {
+            if (state.isListening) {
+                state.isListening = false;
+                if (state.audioContext) await state.audioContext.close();
+                ui.orbRing.classList.remove('animate-pulse-ring');
+                ui.orbIcon.classList.add('opacity-40');
+                ui.orbLabel.textContent = "standby";
+                ui.orbLabel.className = "text-2xl font-light tracking-wide text-white/50 lowercase";
+                ui.btnText.innerHTML = `<svg class="size-6 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> START LISTENING`;
+                ui.statusLed.className = "size-1.5 rounded-full bg-slate-500";
+                log('Microphone channel closed.');
+            } else {
+                ui.btn.disabled = true;
+                const ok = await init();
+                ui.btn.disabled = false;
+                if (!ok) return;
 
-                // Using ScriptProcessor for maximum compatibility (AudioWorklet suggested for future)
-                config.audioProcessor = config.audioContext.createScriptProcessor(1024, 1, 1);
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    state.audioContext = new AudioContext({ sampleRate: 16000 });
+                    const source = state.audioContext.createMediaStreamSource(stream);
 
-                source.connect(config.audioProcessor);
-                config.audioProcessor.connect(config.audioContext.destination);
+                    // FIXED: Power of two buffer
+                    state.processor = state.audioContext.createScriptProcessor(1024, 1, 1);
 
-                config.audioProcessor.onaudioprocess = async (e) => {
-                    if (!config.isListening) return;
+                    source.connect(state.processor);
+                    state.processor.connect(state.audioContext.destination);
 
-                    const input = e.inputBuffer.getChannelData(0);
-                    const scores = await config.model.predict(input);
-
-                    for (const [name, score] of Object.entries(scores)) {
-                        if (score > config.threshold) {
-                            showDetection(name.split('/').pop().replace('.onnx', ''), score);
+                    state.processor.onaudioprocess = async (e) => {
+                        if (!state.isListening) return;
+                        const data = e.inputBuffer.getChannelData(0);
+                        const results = await state.model.predict(data);
+                        for (const [n, s] of Object.entries(results)) {
+                            if (s > state.threshold) {
+                                const clean = n.split('/').pop().replace('.onnx', '');
+                                pushDetection(clean, s);
+                                log(`Match Found: ${clean} (${s.toFixed(2)})`, 'MATCH');
+                            }
                         }
-                    }
-                };
+                    };
 
-                updateStatus('listening', 'AI Listening');
-                elements.button.textContent = "Stop Listening";
-                elements.button.classList.add('btn-active');
-                config.isListening = true;
-            } catch (err) {
-                updateStatus('error', 'Microphone Denied');
-                log(`Mic Error: ${err.message}`);
+                    state.isListening = true;
+                    ui.orbRing.classList.add('animate-pulse-ring');
+                    ui.orbIcon.classList.remove('opacity-40');
+                    ui.orbLabel.textContent = "listening";
+                    ui.orbLabel.className = "text-2xl font-light tracking-wide text-white animate-pulse lowercase";
+                    ui.btnText.innerHTML = `<svg class="size-6 mr-1" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> STOP SESSION`;
+                    ui.statusLed.className = "size-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]";
+                    log('Neural stream active.');
+                } catch (e) {
+                    log(`Access denied: ${e.message}`, 'ERROR');
+                }
             }
         }
 
-        function stopEngine() {
-            config.isListening = false;
-            if (config.audioContext) {
-                config.audioContext.close();
-            }
-            updateStatus('idle', 'System Idle');
-            elements.button.textContent = "Start Listening";
-            elements.button.classList.remove('btn-active');
-        }
-
-        // Event Listeners
-        elements.button.onclick = () => {
-            if (config.isListening) stopEngine();
-            else startEngine();
+        ui.btn.onclick = toggle;
+        ui.slider.oninput = (e) => {
+            state.threshold = parseFloat(e.target.value);
+            ui.sliderVal.textContent = state.threshold.toFixed(2);
+            ui.sliderFill.style.width = `${state.threshold * 100}%`;
+        };
+        ui.slider.onchange = (e) => {
+            log(`Threshold optimized to ${state.threshold.toFixed(2)}`);
         };
 
-        elements.slider.oninput = (e) => {
-            config.threshold = parseFloat(e.target.value);
-            elements.val.textContent = config.threshold.toFixed(2);
-        };
-
-        elements.advanced.onclick = () => {
-            const isVisible = elements.logContainer.classList.toggle('visible');
-            elements.advanced.textContent = isVisible ? "Hide Debug Log" : "Show Advanced Debug Log";
-        };
-
+        log('Intelligence hub standing by.', 'SYSTEM');
     </script>
 </body>
 

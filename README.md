@@ -96,26 +96,34 @@ if (scores["my_custom_model"] > 0.5) {
 
 ---
 
-## Local Development & Demo
+## 💎 Premium AI Interface
 
-### Option A: The Fast Start (Automated)
-If you just want to see it working:
-1. `npm install openwakeword-js onnxruntime-web`
-2. `npx openwakeword-js-setup`
-3. `npx serve .` 
-4. Open `http://localhost:3000`
+The package includes a high-fidelity, Apple-inspired demo UI out of the box. You can find it in `example/index.html`.
 
-### Option B: Manual Development
-If you are developing inside this repository:
-1. Clone the repo and run `npm install`.
-2. Run `npm run download-models`.
-3. Serve the root directory using a static server (e.g., `npx serve .`).
-4. Navigate to `http://localhost:3000/example/index.html`.
+### ✨ Key UI Features
+- **Glassmorphic Design**: Translucent surfaces with deep backdrop blurs.
+- **Pulsating Mic Orb**: Real-time visual feedback using industry-standard easing.
+- **Buttery-Smooth Controls**: Custom, high-precision range sliders for sensitivity adjustment.
+- **Interactive Event Stack**: Animated detection cards for historical triggers.
+- **Neural Console**: Real-time structured diagnostic logs from the inference engine.
+
+### 🚀 Production Transition
+The demo uses the **Tailwind Play CDN** for portability. For production environments:
+1.  **Generate Static CSS**: Use the [Tailwind CLI](https://tailwindcss.com/docs/installation) to minify and purge unused styles.
+2.  **Asset Hosting**: Ensure the `.onnx` and `.wasm` files are served from your own CDN with appropriate CORS headers.
+3.  **Local Imports**: Use the bundled `dist/index.mjs` instead of the JSDelivr CDN for minimum latency.
 
 ---
 
-## Credits
-This package is a JavaScript port of the work by **David Scripka**. We encourage support for the original project's research and model training infrastructure.
+## 🛠️ Contribution & Development
 
-## License
+1.  **Clone the Repo**: `git clone https://github.com/Firojpaudel/OpenWakeWord_npm_porting.git`
+2.  **Install Deps**: `npm install`
+3.  **Build**: `npm run build`
+4.  **Test**: Open `models/test.html` (configured for local repository verification).
+
+---
+*Maintained by WiseYak Team. Inspired by the original [openWakeWord](https://github.com/dscripka/openWakeWord) project.*
+
+## 📄 License
 Apache-2.0

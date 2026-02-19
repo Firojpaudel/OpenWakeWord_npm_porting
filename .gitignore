@@ -156,6 +156,7 @@ models/
 *.onnx
 !models/hello_deepa.onnx
 !models/namaste_deepa.onnx
+!models/test.html
 *.wasm
 
 # OS files
