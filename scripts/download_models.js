@@ -2,7 +2,10 @@
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const packageRoot = path.join(__dirname, '..');
 const MODELS_DIR = path.join(process.cwd(), 'models');
 
 const MODELS = {
@@ -31,6 +34,15 @@ async function downloadFile(url, dest) {
     });
 }
 
+function copyIfExists(src, dest, label) {
+    if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dest);
+        console.log(`- ${label}: ${path.basename(dest)}`);
+        return true;
+    }
+    return false;
+}
+
 async function main() {
     if (!fs.existsSync(MODELS_DIR)) {
         fs.mkdirSync(MODELS_DIR);
@@ -52,26 +64,40 @@ async function main() {
             console.log(`Failed: ${err.message}`);
         }
     }
-    console.log('\nBase models are ready in the ./models folder.');
+    console.log('\nDeploying sample wake word models...');
+    const packageModelsDir = path.join(packageRoot, 'models');
+    ['hello_deepa.onnx', 'namaste_deepa.onnx'].forEach(m => {
+        const src = path.join(packageModelsDir, m);
+        const dest = path.join(MODELS_DIR, m);
+        copyIfExists(src, dest, 'Model');
+    });
 
-    // Automate WASM copying for browser users
-    console.log('Locating ONNX Runtime WebAssembly files...');
+    console.log('\nLocating ONNX Runtime WebAssembly files...');
     const nodeModulesPath = path.join(process.cwd(), 'node_modules', 'onnxruntime-web', 'dist');
 
     if (fs.existsSync(nodeModulesPath)) {
         const wasmFiles = fs.readdirSync(nodeModulesPath).filter(f => f.endsWith('.wasm'));
         for (const file of wasmFiles) {
-            const src = path.join(nodeModulesPath, file);
-            const dest = path.join(MODELS_DIR, file);
-            fs.copyFileSync(src, dest);
-            console.log(`- Copied ${file} to ./models/`);
+            copyIfExists(path.join(nodeModulesPath, file), path.join(MODELS_DIR, file), 'WASM');
         }
-        console.log('WebAssembly files are ready for browser deployment.');
     } else {
-        console.log('Warning: onnxruntime-web not found in node_modules. Run "npm install" first.');
+        console.log('Warning: onnxruntime-web not found. Ensuring high-speed browser execution requires "npm install".');
     }
 
-    console.log('\nCustom wake word models should be added to the same folder.');
+    console.log('\nDeploying AI Listening Interface...');
+    const exampleHtml = path.join(packageRoot, 'example', 'index.html');
+    const destHtml = path.join(process.cwd(), 'index.html');
+    copyIfExists(exampleHtml, destHtml, 'UI');
+
+    console.log('\n----------------------------------------------------');
+    console.log('SETUP COMPLETE');
+    console.log('----------------------------------------------------');
+    console.log('Your precision AI wake word interface is ready.');
+    console.log('\nTo start the demo:');
+    console.log('1. Run: npx serve .');
+    console.log('2. Open: http://localhost:3000');
+    console.log('\nHappy coding!');
+    console.log('----------------------------------------------------\n');
 }
 
 main().catch(console.error);
