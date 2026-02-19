@@ -1,104 +1,118 @@
 # openWakeWord-JS
 
-**The precision JavaScript/TypeScript port of openWakeWord.**
+**The high-performance, precision JavaScript/TypeScript port of openWakeWord.**
 
-A high-accuracy, 100% logic-aligned port of [openWakeWord](https://github.com/dscripka/openWakeWord). Designed for browser-first execution using ONNX Runtime Web, with Node.js support.
+[![NPM Version](https://img.shields.io/npm/v/openwakeword-js.svg)](https://www.npmjs.com/package/openwakeword-js)
+[![License](https://img.shields.io/npm/l/openwakeword-js.svg)](https://github.com/Firojpaudel/OpenWakeWord_npm_porting/blob/main/LICENSE)
 
-## Credits & Acknowledgments
-This package is a JavaScript port of the work by David Scripka. 
-[Original openWakeWord Repository](https://github.com/dscripka/openWakeWord)
-
----
-
-## Getting Started (Technical Overview)
-
-To use this package, you need to understand the main directories:
-1.  **`node_modules/`**: Created automatically when you run `npm install`. Contains all the external libraries (like ONNX Runtime) that this package needs to run.
-2.  **`dist/`**: Created when you run `npm run build` (or provided by the NPM package). It contains the compiled "ready-to-use" JavaScript files.
-3.  **`models/`**: You must create this folder and put the required `.onnx` and `.wasm` files inside it.
-
-### Required Model Assets
-You need at least three models to detect a wake word:
-- `melspectrogram.onnx`: Audio feature extractor.
-- `embedding_model.onnx`: Feature embedding generator.
-- **Your Custom Model**: (e.g., `hey_deepa.onnx`). The specific phrase model.
-- `silero_vad.onnx` (Optional): Voice Activity Detection for improved accuracy.
-
-> [!NOTE]
-> You can generate your own custom wake word models using this [Kaggle Notebook Link](https://www.kaggle.com/code/firojpaudel/deepa-wise).
+A high-accuracy, 100% logic-aligned port of [openWakeWord](https://github.com/dscripka/openWakeWord). This implementation is designed to match the original Python behavior bit-for-bit, ensuring that your custom models perform exactly as they did in training.
 
 ---
 
-## Installation & Setup
+## Technical Features
 
-### 1. Install the package
+- **Signal Parity**: Matches the original Python Mel spectrogram transforms (linear `x/10 + 2` scaling) and log-mel clamping.
+- **Sliding Window Inference**: Implements the required 76-frame mel context for embeddings and 24-frame embedding context for classifiers.
+- **Privacy First**: 100% local execution. No audio data ever leaves the user's device.
+- **Hardware Acceleration**: Optimized via ONNX Runtime Web using WebAssembly (WASM) with SIMD and Multi-threading.
+- **VAD Integration**: Optional Silero VAD gating to reduce CPU usage and prevent false triggers in silence.
+
+---
+
+## Step-by-Step Setup Guide
+
+For a developer to recreate the full pipeline from scratch, follow these exact steps:
+
+### 1. Installation
+In your project directory, install the core library and the ONNX runtime:
 ```bash
 npm install openwakeword-js onnxruntime-web
 ```
 
-### 2. Prepare the `models/` folder
-Create a folder named `models` in your project's root. You need the `.onnx` models there. 
+### 2. Automatic Asset Initialization
+Wake word detection requires specific supporting models (The extraction "ears" and the feature "brain"). We provide a built-in automation script to set up your project directory:
 
-**Automated Setup:**
-Run this command to automatically download the base models (`melspectrogram`, `embedding`, and `silero_vad`) from the original repository:
 ```bash
+# This command does two things:
+# 1. Downloads base models (melspectrogram, embedding, silero_vad) from the original repo.
+# 2. Copies the required .wasm files from your node_modules into ./models/
 npm run download-models
 ```
 
-**Manual Setup:**
-If you prefer to download them manually, make sure these files are in your `models/` folder:
-- `melspectrogram.onnx`
-- `embedding_model.onnx`
-- `silero_vad.onnx` (Optional but recommended)
-- **Your custom wake word model** (e.g., `hey_deepa.onnx`)
-
-**Browser Requirements:** Browsers need the `.wasm` (WebAssembly) files to run the models at high speed. 
-- The `npm run download-models` command automatically copies these for you from `node_modules`.
-- Alternatively, you can use a CDN by setting the `wasmPaths` in the constructor.
+### 3. Training & Models
+You will need a specific wake word model (classifier) for your chosen phrase.
+- **Download Official Models**: You can find many pre-trained `.onnx` models (like `alexa.onnx`) in the [original repository](https://github.com/dscripka/openWakeWord).
+- **Train Your Own**: Use this [Kaggle Notebook](https://www.kaggle.com/code/firojpaudel/deepa-wise) to train a custom model for any word, then download the exported `.onnx` file and put it in your `./models/` folder.
 
 ---
 
-## Browser Demo
+## The Execution Pipeline
 
-A minimal browser implementation is provided in the `example/index.html` file. You can use it as a reference for handling microphone input and displaying scores.
+Understanding how the data flows helps in debugging and implementation:
 
-To run the demo locally:
-1. Install dependencies: `npm install`
-2. Download models: `npm run download-models`
-3. Serve the project: `npx serve .` (or any static file server)
-4. Open `http://localhost:3000/example/index.html`
+1.  **Audio In**: Feed 16kHz Mono audio chunks (typically 1280 samples / 80ms).
+2.  **Mel Processing**: The library converts audio into Mel Spectrograms using `melspectrogram.onnx`.
+3.  **Embedding Generation**: Every 8 Mel frames (shifted) generates one Embedding vector via `embedding_model.onnx`.
+4.  **Classification**: Your custom model looks at a window of 24 embeddings to decide if the word was spoken.
 
 ---
 
-## Usage Example
+## Usage Example (TypeScript / JavaScript)
 
 ```typescript
 import { Model } from 'openwakeword-js';
 
+// Configuration
 const model = new Model({
+  // 1. Path to your phrase model (e.g., from Kaggle or Official repo)
   wakewordModels: ['./models/my_custom_model.onnx'],
+  
+  // 2. Paths to the feature extraction models (created by download-models)
   melspectrogramModelPath: './models/melspectrogram.onnx',
   embeddingModelPath: './models/embedding_model.onnx',
   
-  // Optional VAD for better accuracy in noisy environments
+  // 3. Optional VAD config
   vadModelPath: './models/silero_vad.onnx',
   vadThreshold: 0.5,
 
   inferenceFramework: 'onnx',
   
-  // Browser ONLY: Direction to WASM files
+  // 4. Direction to WASM binaries (required for browser context)
   wasmPaths: './models/' 
 });
 
+// Initialize (Downloads/Loads models into memory)
 await model.init();
 
-// Feed 1280 samples of 16kHz mono audio
-const scores = await model.predict(audioChunk);
-console.log(scores); 
+/**
+ * Feed audio chunks.
+ * inputData can be a Float32Array (normalized -1 to 1) 
+ * or an Int16Array (raw PCM 16-bit).
+ */
+const scores = await model.predict(inputData);
+
+// Output format: { "my_custom_model": 0.85 }
+if (scores["my_custom_model"] > 0.5) {
+    console.log("Wake word detected locally!");
+}
 ```
 
-## Privacy
-Voice processing runs entirely on the user's local machine. No audio data is transmitted to external servers.
+---
+
+## Local Development & Demo
+
+We have included a full working example in the `example/` folder.
+
+1.  Clone the repo and run `npm install`.
+2.  Run `npm run download-models`.
+3.  Serve the root directory using a static server (e.g., `npx serve .`).
+4.  Navigate to `http://localhost:3000/example/index.html`.
+5.  Allow Microphone access and watch the real-time scores.
+
+---
+
+## Credits
+This package is a JavaScript port of the work by **David Scripka**. We encourage support for the original project's research and model training infrastructure.
 
 ## License
 Apache-2.0
