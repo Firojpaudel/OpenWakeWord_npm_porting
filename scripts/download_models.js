@@ -52,7 +52,25 @@ async function main() {
         }
     }
     console.log('\nBase models are ready in the ./models folder.');
-    console.log('Custom wake word models should be added to the same folder.');
+
+    // Automate WASM copying for browser users
+    console.log('Locating ONNX Runtime WebAssembly files...');
+    const nodeModulesPath = path.join(process.cwd(), 'node_modules', 'onnxruntime-web', 'dist');
+
+    if (fs.existsSync(nodeModulesPath)) {
+        const wasmFiles = fs.readdirSync(nodeModulesPath).filter(f => f.endsWith('.wasm'));
+        for (const file of wasmFiles) {
+            const src = path.join(nodeModulesPath, file);
+            const dest = path.join(MODELS_DIR, file);
+            fs.copyFileSync(src, dest);
+            console.log(`- Copied ${file} to ./models/`);
+        }
+        console.log('WebAssembly files are ready for browser deployment.');
+    } else {
+        console.log('Warning: onnxruntime-web not found in node_modules. Run "npm install" first.');
+    }
+
+    console.log('\nCustom wake word models should be added to the same folder.');
 }
 
 main().catch(console.error);

@@ -51,8 +51,8 @@ If you prefer to download them manually, make sure these files are in your `mode
 - **Your custom wake word model** (e.g., `hey_deepa.onnx`)
 
 **Browser Requirements:** Browsers need the `.wasm` (WebAssembly) files to run the models at high speed. 
-- You can copy them from `node_modules/onnxruntime-web/dist/*.wasm` into your `models/` folder.
-- Or use a CDN by setting the `wasmPaths` in the constructor.
+- The `npm run download-models` command automatically copies these for you from `node_modules`.
+- Alternatively, you can use a CDN by setting the `wasmPaths` in the constructor.
 
 ---
 
