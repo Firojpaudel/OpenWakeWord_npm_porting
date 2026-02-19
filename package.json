@@ -1,5 +1,5 @@
 {
-    "name": "@openwakeword/js",
+    "name": "openwakeword-js",
     "version": "0.1.0",
     "description": "Port of openWakeWord to JavaScript/TypeScript using ONNX Runtime",
     "main": "dist/index.js",
@@ -45,8 +45,8 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/dscripka/openWakeWord.git"
+        "url": "https://github.com/Firojpaudel/OpenWakeWord_npm_porting.git"
     },
-    "author": "David Scripka (Original), WiseYak (JS Port)",
+    "author": "David Scripka (Original), Firojpaudel (JS Port)",
     "license": "Apache-2.0"
 }
