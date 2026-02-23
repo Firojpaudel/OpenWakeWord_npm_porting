@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>AI Wake Word Detector | OpenWakeWord JS</title>
+
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -286,7 +287,7 @@
                             class="h-44 overflow-y-auto rounded-xl bg-[#030406] p-4 font-mono text-[10px] text-slate-600 border border-white/5 custom-scrollbar leading-relaxed">
                             <div
                                 class="opacity-40 animate-pulse font-bold text-blue-900 border border-blue-900/40 p-1 inline-block rounded mb-2">
-                                OPENWAKEWORD-JS V0.1.18 READY</div>
+                                OPENWAKEWORD-JS V0.1.19 READY</div>
                         </div>
                     </div>
                 </details>
@@ -305,8 +306,11 @@
             model: null,
             audioContext: null,
             processor: null,
-            startTime: Date.now()
+            startTime: Date.now(),
+            lastActivationTime: 0,
+            cooldownSeconds: 2.0
         };
+
 
         const ui = {
             btn: document.getElementById('toggleBtn'),
@@ -345,12 +349,13 @@
             log('Neural buffers allocating locally...', 'SYSTEM');
             try {
                 state.model = new Model({
-                    wakewordModels: ['./models/hello_deepa.onnx', './models/namaste_deepa.onnx'],
+                    wakewordModels: ['./models/hello_deepa.onnx', './models/namaste_deepa.onnx', './models/hello_deepa_old.onnx'],
                     melspectrogramModelPath: './models/melspectrogram.onnx',
                     embeddingModelPath: './models/embedding_model.onnx',
-                    vadModelPath: './models/silero_vad.onnx',
                     inferenceFramework: 'onnx',
                     wasmPaths: './models/'
+
+
                 });
                 await state.model.init();
                 log('Neural intelligence hub connected.', 'SYSTEM');
@@ -363,16 +368,33 @@
 
         function pushDetection(name, score) {
             if (ui.empty) ui.empty.style.display = 'none';
+            const isHello = name.includes('hello_deepa');
+            const isNamaste = name.includes('namaste');
+
+            let displayText = name.replace(/_/g, ' ');
+            let langLabel = "Neural Activation Triggered";
+            let langColor = "text-slate-500";
+
+            if (isHello) {
+                displayText = "Hello Deepa Activated..";
+                langLabel = "Language: English";
+                langColor = "text-blue-400";
+            } else if (isNamaste) {
+                displayText = "Namaste Deepa Activated..";
+                langLabel = "Language: Nepali";
+                langColor = "text-red-400";
+            }
+
             const card = document.createElement('div');
-            card.className = "detection-card flex items-center justify-between p-5 bg-white/5 backdrop-blur-md rounded-[1.5rem] border border-white/10 shadow-lg";
+            card.className = "group flex flex-row items-center justify-between p-5 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/[0.05] hover:border-white/10 transition-all duration-300 transform animate-in fade-in slide-in-from-right-4";
             card.innerHTML = `
                 <div class="flex items-center gap-4">
-                    <div class="size-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20 shadow-inner">
+                    <div class="size-12 rounded-full overflow-hidden flex items-center justify-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
                         <svg class="size-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </div>
                     <div class="flex flex-col">
-                        <span class="text-white font-bold capitalize text-base tracking-tight">${name.replace(/_/g, ' ')}</span>
-                        <span class="text-[9px] text-slate-500 font-black uppercase tracking-[0.1em]">Neural Activation Triggered</span>
+                        <span class="text-white font-bold capitalize text-base tracking-tight">${displayText}</span>
+                        <span class="text-[9px] ${langColor} font-black uppercase tracking-[0.1em]">${langLabel}</span>
                     </div>
                 </div>
                 <div class="flex flex-col items-end gap-1">
@@ -383,6 +405,7 @@
             ui.stack.prepend(card);
             if (ui.stack.children.length > 5) ui.stack.lastElementChild.remove();
         }
+
 
         async function toggle() {
             if (state.isListening) {
@@ -406,26 +429,62 @@
                     state.audioContext = new AudioContext({ sampleRate: 16000 });
                     const source = state.audioContext.createMediaStreamSource(stream);
 
-                    // FIXED: Power of two buffer
-                    state.processor = state.audioContext.createScriptProcessor(1024, 1, 1);
+                    // Robust processing queue to prevent re-entrancy and state corruption
+                    const audioQueue = [];
+                    let isProcessing = false;
 
+                    async function processQueue() {
+                        if (isProcessing || audioQueue.length === 0) return;
+                        isProcessing = true;
+
+                        while (audioQueue.length > 0) {
+                            const data = audioQueue.shift();
+
+                            // Python-style Cooldown Check
+                            const currentTime = Date.now();
+                            if (currentTime - state.lastActivationTime < state.cooldownSeconds * 1000) {
+                                continue;
+                            }
+
+                            try {
+                                const results = await state.model.predict(data);
+                                for (const [n, s] of Object.entries(results)) {
+                                    if (s > state.threshold) {
+                                        const clean = n.split('/').pop().replace('.onnx', '');
+
+                                        // Detection Triggered
+                                        state.lastActivationTime = Date.now();
+                                        pushDetection(clean, s);
+                                        log(`Match Found: ${clean} (${s.toFixed(2)})`, 'MATCH');
+
+                                        // Python-style Reset & Clear Queue
+                                        if (state.model.reset) state.model.reset();
+                                        audioQueue.length = 0; // Clear the queue
+                                        break; // Only trigger one wake word at a time
+                                    }
+                                }
+                            } catch (err) {
+                                log(`Inference Error: ${err.message}`, 'ERROR');
+                            }
+                        }
+
+                        isProcessing = false;
+                    }
+
+
+                    state.processor = state.audioContext.createScriptProcessor(2048, 1, 1);
                     source.connect(state.processor);
                     state.processor.connect(state.audioContext.destination);
 
-                    state.processor.onaudioprocess = async (e) => {
+                    state.processor.onaudioprocess = (e) => {
                         if (!state.isListening) return;
-                        const data = e.inputBuffer.getChannelData(0);
-                        const results = await state.model.predict(data);
-                        for (const [n, s] of Object.entries(results)) {
-                            if (s > state.threshold) {
-                                const clean = n.split('/').pop().replace('.onnx', '');
-                                pushDetection(clean, s);
-                                log(`Match Found: ${clean} (${s.toFixed(2)})`, 'MATCH');
-                            }
-                        }
+                        const data = new Float32Array(e.inputBuffer.getChannelData(0));
+                        audioQueue.push(data);
+                        processQueue();
                     };
 
                     state.isListening = true;
+
                     ui.orbRing.classList.add('animate-pulse-ring');
                     ui.orbIcon.classList.remove('opacity-40');
                     ui.orbLabel.textContent = "listening";

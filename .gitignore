@@ -154,6 +154,7 @@ yarn-error.log*
 # Models and WASM
 models/*
 !models/hello_deepa.onnx
+!models/hello_deepa_old.onnx
 !models/namaste_deepa.onnx
 !models/test.html
 # Ignore WASM and runtime artifacts in models/

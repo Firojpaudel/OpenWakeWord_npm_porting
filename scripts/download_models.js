@@ -14,7 +14,7 @@ const EXTERNAL_MODELS = {
     'silero_vad.onnx': 'https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/silero_vad.onnx'
 };
 
-const SAMPLE_MODELS = ['hello_deepa.onnx', 'namaste_deepa.onnx'];
+const SAMPLE_MODELS = ['hello_deepa.onnx', 'hello_deepa_old.onnx', 'namaste_deepa.onnx'];
 
 async function downloadFile(url, dest) {
     return new Promise((resolve, reject) => {
@@ -100,7 +100,7 @@ async function main() {
     copyIfExists(path.join(packageRoot, 'models', 'test.html'), path.join(MODELS_DIR, 'test.html'), 'Debug UI');
 
     console.log('\n----------------------------------------------------');
-    console.log('SETUP COMPLETE (v0.1.18)');
+    console.log('SETUP COMPLETE (v0.1.19)');
     console.log('----------------------------------------------------');
     console.log('Your precision AI wake word interface is ready.');
     console.log('\nTo start the demo:');
