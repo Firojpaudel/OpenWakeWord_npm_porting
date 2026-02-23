@@ -100,7 +100,7 @@ async function main() {
     copyIfExists(path.join(packageRoot, 'models', 'test.html'), path.join(MODELS_DIR, 'test.html'), 'Debug UI');
 
     console.log('\n----------------------------------------------------');
-    console.log('SETUP COMPLETE (v0.1.20)');
+    console.log('SETUP COMPLETE (v0.1.21)');
     console.log('----------------------------------------------------');
     console.log('Your precision AI wake word interface is ready.');
     console.log('\nTo start the demo:');

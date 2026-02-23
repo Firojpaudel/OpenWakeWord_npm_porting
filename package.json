@@ -23,6 +23,7 @@
         "index.html",
         "openwakeword.mjs",
         "models/hello_deepa.onnx",
+        "models/hello_deepa_old.onnx",
         "models/namaste_deepa.onnx",
         "README.md",
         "LICENSE"
