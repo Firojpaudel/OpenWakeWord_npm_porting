@@ -95,12 +95,13 @@ async function main() {
     console.log('\nDeploying optimized AI Listening Interface...');
     copyIfExists(path.join(packageRoot, 'index.html'), path.join(process.cwd(), 'index.html'), 'UI');
     copyIfExists(path.join(packageRoot, 'openwakeword.mjs'), path.join(process.cwd(), 'openwakeword.mjs'), 'Library');
+    copyIfExists(path.join(packageRoot, 'worker.mjs'), path.join(process.cwd(), 'worker.mjs'), 'Worker');
 
     // Copy test.html too
     copyIfExists(path.join(packageRoot, 'models', 'test.html'), path.join(MODELS_DIR, 'test.html'), 'Debug UI');
 
     console.log('\n----------------------------------------------------');
-    console.log('SETUP COMPLETE (v0.1.21)');
+    console.log('SETUP COMPLETE (v0.1.26)');
     console.log('----------------------------------------------------');
     console.log('Your precision AI wake word interface is ready.');
     console.log('\nTo start the demo:');

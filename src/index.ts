@@ -39,17 +39,18 @@ export class Model {
     private embeddingSession: ort.InferenceSession | null = null;
     private vadSession: ort.InferenceSession | null = null;
     private customSessions: Map<string, ort.InferenceSession> = new Map();
+    private embeddingWindowSizes: Map<string, number> = new Map();
 
     // Buffers
     private melBuffer: Float32Array[] = [];
-    private embeddingBuffers: Map<string, Float32Array[]> = new Map();
+    private embeddingBuffers: Float32Array[] = [];
     private predictionBuffers: Map<string, number[]> = new Map();
     private vadBuffer: number[] = [];
     private rawAudioRemainder: Float32Array = new Float32Array(0);
     private melContextBuffer: Float32Array;
 
     // Seeding history
-    private noiseSeededEmbeddings: Map<string, Float32Array[]> = new Map();
+    private noiseSeededEmbeddings: Float32Array[] = [];
 
     // Constants
     private readonly CHUNK_SIZE = 1280;
@@ -62,6 +63,7 @@ export class Model {
     private readonly MAX_MEL_FRAMES = 970;
     private readonly INITIAL_FRAMES_SUPPRESS = 5;
     private readonly PREDICTION_BUFFER_MAX = 30;
+    private readonly GLOBAL_MAX_EMBEDDING_WINDOW = 50;
 
     // VAD State (Silero VAD)
     private vadStateH = new Float32Array(2 * 1 * 64).fill(0);
@@ -119,21 +121,43 @@ export class Model {
                 generatedEmbeddings.push(emb);
             }
 
+            this.noiseSeededEmbeddings = generatedEmbeddings.slice(-this.GLOBAL_MAX_EMBEDDING_WINDOW).map(e => new Float32Array(e));
+            this.embeddingBuffers = this.noiseSeededEmbeddings.map(e => new Float32Array(e));
+
             for (const modelPath of this.options.wakewordModels) {
                 const session = await ort.InferenceSession.create(modelPath);
                 const name = this.extractModelName(modelPath);
                 this.customSessions.set(name, session);
 
-                // Store seeded history to be used during initial prediction and resets
-                const history = generatedEmbeddings.slice(-this.EMBEDDING_WINDOW_SIZE).map(e => new Float32Array(e));
-                this.noiseSeededEmbeddings.set(name, history);
-                this.embeddingBuffers.set(name, history.map(e => new Float32Array(e)));
+                // DYNAMIC DIMENSION DETECTION (Auto-healing via dummy run)
+                const inputName = session.inputNames[0];
+                let windowSize = 24; // Standard fallback
+
+                try {
+                    // We attempt a dummy inference with the default 24 frames.
+                    // If the model expects 25 (or anything else), ONNX Runtime will explicitly throw an error telling us the exact expected size.
+                    const dummyTensor = new ort.Tensor('float32', new Float32Array(24 * 96), [1, 24, 96]);
+                    await session.run({ [inputName]: dummyTensor });
+                } catch (e: any) {
+                    const msg = e.toString();
+                    const match = msg.match(/Got: \d+ Expected: (\d+)/);
+                    if (match) {
+                        windowSize = parseInt(match[1], 10);
+                        console.log(`Model [${name}] dimension auto-corrected from 24 to ${windowSize} via runtime inspection`);
+                    } else if (msg.includes('Expected')) {
+                        // Fallback generic parsing if format varies slightly
+                        console.warn(`Model [${name}] dummy run failed, but couldn't parse exact dimension. Error: ${msg}`);
+                    }
+                }
+
+                console.log(`Model [${name}] initialized with dynamic window size: ${windowSize}`);
+                this.embeddingWindowSizes.set(name, windowSize);
                 this.predictionBuffers.set(name, []);
             }
 
-            // Final sync: don't call reset() here as it would wipe what we just did
+            // Final sync
             this.isLoaded = true;
-            console.log('OpenWakeWord models loaded and bit-perfectly aligned');
+            console.log('OpenWakeWord models loaded with dynamic dimensionality support');
         } catch (error) {
             console.error('Failed to initialize OpenWakeWord models:', error);
             throw error;
@@ -173,7 +197,7 @@ export class Model {
             const chunk = combinedAudio.subarray(offset, offset + this.CHUNK_SIZE);
             offset += this.CHUNK_SIZE;
 
-            // PRECISE SLIDING WINDOW: 1280 new samples + 480 context samples
+            // PRECISE SLIDING WINDOW
             const melInput = new Float32Array(this.CHUNK_SIZE + this.MEL_CONTEXT);
             melInput.set(this.melContextBuffer);
             melInput.set(chunk, this.MEL_CONTEXT);
@@ -197,12 +221,13 @@ export class Model {
             while (this.melBuffer.length > this.MAX_MEL_FRAMES) this.melBuffer.shift();
 
             const embedding = await this.runEmbeddingModel();
-            for (const [name, session] of this.customSessions.entries()) {
-                const embBuf = this.embeddingBuffers.get(name)!;
-                embBuf.shift();
-                embBuf.push(embedding);
+            this.embeddingBuffers.push(embedding);
+            while (this.embeddingBuffers.length > this.GLOBAL_MAX_EMBEDDING_WINDOW) this.embeddingBuffers.shift();
 
-                let score = await this.runClassifier(name, session);
+            for (const [name, session] of this.customSessions.entries()) {
+                const windowSize = this.embeddingWindowSizes.get(name) || 24;
+
+                let score = await this.runClassifier(name, session, windowSize);
 
                 if (this.vadSession && this.options.vadThreshold) {
                     const window = this.vadBuffer.slice(-7, -4);
@@ -262,11 +287,15 @@ export class Model {
         return embedding;
     }
 
-    private async runClassifier(name: string, session: ort.InferenceSession): Promise<number> {
-        const embBuf = this.embeddingBuffers.get(name)!;
-        const predData = new Float32Array(this.EMBEDDING_WINDOW_SIZE * 96);
-        for (let t = 0; t < this.EMBEDDING_WINDOW_SIZE; t++) predData.set(embBuf[t], t * 96);
-        const predTensor = new ort.Tensor('float32', predData, [1, this.EMBEDDING_WINDOW_SIZE, 96]);
+    private async runClassifier(name: string, session: ort.InferenceSession, windowSize: number): Promise<number> {
+        const predData = new Float32Array(windowSize * 96);
+        const startIdx = this.embeddingBuffers.length - windowSize;
+
+        for (let t = 0; t < windowSize; t++) {
+            predData.set(this.embeddingBuffers[startIdx + t], t * 96);
+        }
+
+        const predTensor = new ort.Tensor('float32', predData, [1, windowSize, 96]);
         const results = await session.run({ [session.inputNames[0]]: predTensor });
         return results[session.outputNames[0]].data[0] as number;
     }
@@ -293,7 +322,7 @@ export class Model {
 
     private extractModelName(path: string): string {
         const base = path.split('/').pop() || path;
-        return base.replace('.onnx', '').replace('.tflite', '');
+        return base.replace('.onnx', '').replace('.tflite', '').replace(/\\/g, '/');
     }
 
     reset() {
@@ -303,14 +332,9 @@ export class Model {
         this.vadBuffer = [];
         this.vadStateH.fill(0);
         this.vadStateC.fill(0);
-        for (const name of this.embeddingBuffers.keys()) {
+        this.embeddingBuffers = this.noiseSeededEmbeddings.map(e => new Float32Array(e));
+        for (const name of this.customSessions.keys()) {
             this.predictionBuffers.set(name, []);
-            const seeded = this.noiseSeededEmbeddings.get(name);
-            if (seeded) {
-                this.embeddingBuffers.set(name, seeded.map(e => new Float32Array(e)));
-            } else {
-                this.embeddingBuffers.set(name, Array(this.EMBEDDING_WINDOW_SIZE).fill(0).map(() => new Float32Array(96).fill(0)));
-            }
         }
     }
 }

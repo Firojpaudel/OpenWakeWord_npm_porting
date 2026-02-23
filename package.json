@@ -1,6 +1,6 @@
 {
     "name": "openwakeword-js",
-    "version": "0.1.22",
+    "version": "0.1.26",
     "description": "Port of openWakeWord to JavaScript/TypeScript using ONNX Runtime",
     "bin": {
         "openwakeword-js-setup": "scripts/download_models.js"
@@ -22,9 +22,14 @@
         "scripts",
         "index.html",
         "openwakeword.mjs",
+        "worker.mjs",
         "models/hello_deepa.onnx",
         "models/hello_deepa_old.onnx",
         "models/namaste_deepa.onnx",
+        "models/melspectrogram.onnx",
+        "models/embedding_model.onnx",
+        "models/silero_vad.onnx",
+        "models/test.html",
         "README.md",
         "LICENSE"
     ],

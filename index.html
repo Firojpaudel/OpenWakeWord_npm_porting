@@ -229,14 +229,14 @@
                         <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Confidence
                             Threshold</label>
                         <span id="thresholdVal"
-                            class="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">0.50</span>
+                            class="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">0.09</span>
                     </div>
                     <div class="slider-container relative h-6">
                         <input id="thresholdSlider" class="w-full relative z-2" max="0.99" min="0.01" step="0.01"
-                            type="range" value="0.50" />
+                            type="range" value="0.09" />
                         <div id="sliderFill"
                             class="absolute left-0 top-1/2 -translate-y-1/2 h-[4px] bg-primary rounded-l-full"
-                            style="width: 50%;"></div>
+                            style="width: 9%;"></div>
                     </div>
                 </div>
 
@@ -287,7 +287,7 @@
                             class="h-44 overflow-y-auto rounded-xl bg-[#030406] p-4 font-mono text-[10px] text-slate-600 border border-white/5 custom-scrollbar leading-relaxed">
                             <div
                                 class="opacity-40 animate-pulse font-bold text-blue-900 border border-blue-900/40 p-1 inline-block rounded mb-2">
-                                OPENWAKEWORD-JS V0.1.21 READY</div>
+                                OPENWAKEWORD-JS V0.1.26 READY</div>
                         </div>
                     </div>
                 </details>
@@ -302,13 +302,16 @@
 
         const state = {
             isListening: false,
-            threshold: 0.50,
-            model: null,
+            threshold: 0.09,
+            worker: null,
             audioContext: null,
             processor: null,
             startTime: Date.now(),
             lastActivationTime: 0,
-            cooldownSeconds: 2.0
+            cooldownSeconds: 0.6,
+            isWorkerReady: false,
+            audioQueue: new Float32Array(0),
+            isProcessing: false
         };
 
 
@@ -345,25 +348,38 @@
         }
 
         async function init() {
-            if (state.model) return true;
-            log('Neural buffers allocating locally...', 'SYSTEM');
-            try {
-                state.model = new Model({
-                    wakewordModels: ['./models/hello_deepa.onnx', './models/namaste_deepa.onnx'],
-                    melspectrogramModelPath: './models/melspectrogram.onnx',
-                    embeddingModelPath: './models/embedding_model.onnx',
-                    inferenceFramework: 'onnx',
-                    wasmPaths: './models/'
+            if (state.worker) return true;
+            log('Initializing Neural Worker...', 'SYSTEM');
+            return new Promise((resolve) => {
+                state.worker = new Worker('./worker.mjs', { type: 'module' });
 
+                state.worker.onmessage = (e) => {
+                    const { type, results, message } = e.data;
+                    if (type === 'init-complete') {
+                        state.isWorkerReady = true;
+                        log('Neural intelligence hub connected (Off-thread).', 'SYSTEM');
+                        resolve(true);
+                    } else if (type === 'results') {
+                        handleInferenceResults(results);
+                    } else if (type === 'error') {
+                        log(`Neural Fault: ${message}`, 'ERROR');
+                        resolve(false);
+                    }
+                };
 
+                state.worker.postMessage({
+                    type: 'init',
+                    data: {
+                        options: {
+                            wakewordModels: ['./models/hello_deepa.onnx', './models/namaste_deepa.onnx'],
+                            melspectrogramModelPath: './models/melspectrogram.onnx',
+                            embeddingModelPath: './models/embedding_model.onnx',
+                            inferenceFramework: 'onnx',
+                            wasmPaths: './models/'
+                        }
+                    }
                 });
-                await state.model.init();
-                log('Neural intelligence hub connected.', 'SYSTEM');
-                return true;
-            } catch (e) {
-                log(`Session fault: ${e.message}`, 'ERROR');
-                return false;
-            }
+            });
         }
 
         function pushDetection(name, score) {
@@ -407,6 +423,45 @@
         }
 
 
+        // GLOBAL HANDLERS FOR WEB WORKER
+        function handleInferenceResults(results) {
+            const currentTime = Date.now();
+
+            // Ignore all triggers if we are in overall cooldown
+            if (currentTime - state.lastActivationTime < state.cooldownSeconds * 1000) {
+                return;
+            }
+
+            for (const [n, s] of Object.entries(results)) {
+                if (s > state.threshold) {
+                    const clean = n.split('/').pop().replace('.onnx', '');
+
+                    // Detection Triggered
+                    state.lastActivationTime = currentTime;
+                    pushDetection(clean, s);
+                    log(`Match Found: ${clean} (${s.toFixed(2)})`, 'MATCH');
+
+                    // RESYNC: Clear the local audio queue to "snap" back to the present
+                    state.audioQueue = new Float32Array(0);
+                    break;
+                }
+            }
+        }
+
+        async function processQueue() {
+            if (state.isProcessing || !state.isWorkerReady) return;
+            state.isProcessing = true;
+
+            const CHUNK_SIZE = 1280;
+            while (state.audioQueue.length >= CHUNK_SIZE) {
+                const chunk = state.audioQueue.slice(0, CHUNK_SIZE);
+                state.audioQueue = state.audioQueue.slice(CHUNK_SIZE);
+                state.worker.postMessage({ type: 'predict', data: { audio: chunk } });
+            }
+
+            state.isProcessing = false;
+        }
+
         async function toggle() {
             if (state.isListening) {
                 state.isListening = false;
@@ -425,61 +480,34 @@
                 if (!ok) return;
 
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false,
+                            channelCount: 1,
+                            sampleRate: 16000
+                        }
+                    });
                     state.audioContext = new AudioContext({ sampleRate: 16000 });
                     const source = state.audioContext.createMediaStreamSource(stream);
 
-                    // Robust processing queue to prevent re-entrancy and state corruption
-                    const audioQueue = [];
-                    let isProcessing = false;
-
-                    async function processQueue() {
-                        if (isProcessing || audioQueue.length === 0) return;
-                        isProcessing = true;
-
-                        while (audioQueue.length > 0) {
-                            const data = audioQueue.shift();
-
-                            // Python-style Cooldown Check
-                            const currentTime = Date.now();
-                            if (currentTime - state.lastActivationTime < state.cooldownSeconds * 1000) {
-                                continue;
-                            }
-
-                            try {
-                                const results = await state.model.predict(data);
-                                for (const [n, s] of Object.entries(results)) {
-                                    if (s > state.threshold) {
-                                        const clean = n.split('/').pop().replace('.onnx', '');
-
-                                        // Detection Triggered
-                                        state.lastActivationTime = Date.now();
-                                        pushDetection(clean, s);
-                                        log(`Match Found: ${clean} (${s.toFixed(2)})`, 'MATCH');
-
-                                        // Python-style Reset & Clear Queue
-                                        if (state.model.reset) state.model.reset();
-                                        audioQueue.length = 0; // Clear the queue
-                                        break; // Only trigger one wake word at a time
-                                    }
-                                }
-                            } catch (err) {
-                                log(`Inference Error: ${err.message}`, 'ERROR');
-                            }
-                        }
-
-                        isProcessing = false;
-                    }
-
-
-                    state.processor = state.audioContext.createScriptProcessor(2048, 1, 1);
+                    // Increased buffer size to 4096 (approx 256ms) to give the main thread more breathing room 
+                    // and match closer to Python's batching behavior without sacrificing real-time feel.
+                    state.processor = state.audioContext.createScriptProcessor(4096, 1, 1);
                     source.connect(state.processor);
                     state.processor.connect(state.audioContext.destination);
 
                     state.processor.onaudioprocess = (e) => {
                         if (!state.isListening) return;
-                        const data = new Float32Array(e.inputBuffer.getChannelData(0));
-                        audioQueue.push(data);
+                        const newData = new Float32Array(e.inputBuffer.getChannelData(0));
+
+                        // Append new data to queue
+                        const combinedInfo = new Float32Array(state.audioQueue.length + newData.length);
+                        combinedInfo.set(state.audioQueue);
+                        combinedInfo.set(newData, state.audioQueue.length);
+                        state.audioQueue = combinedInfo;
+
                         processQueue();
                     };
 
